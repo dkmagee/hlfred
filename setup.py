@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='hlfred',
     version='0.1',
-    packages=['hlfred', 'hlfred.commands'],
+    packages=['hlfred', 'hlfred.commands', 'hlfred.tasks', 'hlfred.utils'],
     include_package_data=True,
     install_requires=[
         'Click',
