@@ -21,10 +21,6 @@ In your browser go to https://github.com/dkmagee/superalign and click on the "Do
 ##Installing hlfred
 
 
-####Download
-
-In your browser go to https://github.com/dkmagee/hlfred and click on the "Download ZIP" button on the lower right of the page.
-
 ####Create a Ureka variant
 	
 	ur_setup -n hlfred
