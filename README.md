@@ -31,16 +31,17 @@ In your browser go to https://github.com/dkmagee/superalign and click on the "Do
 
 ##Running
 
-HLFRED requires that you either have the enviroment variables `HLFRED_DSDIR` and `HLFRED_RUNDIR` set for the input and output directories or you supply them on the command line.
+HLFRED requires that you have the enviroment variables `HLFRED_DSDIR` and `HLFRED_RUNDIR` set for the input and output directories or you supply them on the command line. HLFRED will look for input data in `HLFRED_DSDIR/my_dataset_name` and will copy these data to `HLFRED_RUNDIR/my_dataset_name` and process the it in this directory.
 
-Here's a simple shell script to run all tasks:
+Here's a simple shell script to run all tasks with the input data in a directory `HLFRED_DSDIR/test_hlf`:
 
 	export HLFRED_DSDIR='/Volumes/DataRaid1/Data/DATASETS'
 	export HLFRED_RUNDIR='/Volumes/DataRaid1/Data/REDUCED'
+	DSN='test_hlf'
 
-	hlfred dataset_name init
-	hlfred dataset_name drzi
-	hlfred dataset_name mcat
-	hlfred dataset_name saln
-	hlfred dataset_name apsh
-	hlfred dataset_name drzm
+	hlfred $DSN init
+	hlfred $DSN drzi
+	hlfred $DSN mcat
+	hlfred $DSN saln
+	hlfred $DSN apsh
+	hlfred $DSN drzm
