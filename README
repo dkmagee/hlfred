@@ -1,0 +1,11 @@
+You must have Ureka install on your system. Download it from http://ssb.stsci.edu/ureka/
+
+INSTALL
+
+1. Install virtualenvwrapper
+	pip install virtualenvwrapper
+2. export WORKON_HOME=~/Envs
+3. mkdir -p $WORKON_HOME
+4. source /usr/local/bin/virtualenvwrapper.sh
+5. ur_setup
+6. mkvirtualenv hlfred
