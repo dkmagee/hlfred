@@ -9,3 +9,21 @@ INSTALL
 4. source /usr/local/bin/virtualenvwrapper.sh
 5. ur_setup
 6. mkvirtualenv hlfred
+
+RUNNING
+
+hlfred requires that you either have the enviroment variables HLFRED_DSDIR and HLFRED_RUNDIR set or you 
+
+Here's a shell script to run all tasks:
+
+#!/bin/bash
+
+export HLFRED_DSDIR='/Volumes/DataRaid1/Data/DATASETS'
+export HLFRED_RUNDIR='/Volumes/DataRaid1/Data/REDUCED'
+
+hlfred dataset_name init
+hlfred dataset_name drzi
+hlfred dataset_name mcat
+hlfred dataset_name saln
+hlfred dataset_name apsh
+hlfred dataset_name drzm
