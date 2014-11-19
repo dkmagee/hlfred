@@ -46,7 +46,7 @@ def cli(ctx, sin, sout, sfile, itype, otype, ptask):
         utils.wConfig(cfg, cfgf)
         print e
         raise
-
+        
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)

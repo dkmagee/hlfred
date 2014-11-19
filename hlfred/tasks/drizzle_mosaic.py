@@ -1,7 +1,12 @@
 from drizzlepac import astrodrizzle
+from stwcs.wcsutil import headerlet, HSTWCS
 
-def drzMosaic(infiles, outfile, ctype='minmed'):
+def drzMosaic(infiles, outfile, usehlet=False, ctype='minmed'):
     """Run full AstroDrizzle"""
+    if usehlet:
+        for flt in infiles:
+            hdrlet = flt.replace('_flt.fits', '_hlet.fits')
+            headerlet.apply_headerlet_as_primary(flt, hdrlet, attach=True, archive=True, force=False, logging=False)
     astrodrizzle.AstroDrizzle(
         infiles,
         output=outfile,

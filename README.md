@@ -35,13 +35,20 @@ HLFRED requires that you have the enviroment variables `HLFRED_DSDIR` and `HLFRE
 
 Here's a simple shell script to run all tasks with the input data in a directory `HLFRED_DSDIR/test_hlf`:
 
-	export HLFRED_DSDIR='/Volumes/DataRaid1/Data/DATASETS'
-	export HLFRED_RUNDIR='/Volumes/DataRaid1/Data/REDUCED'
-	DSN='test_hlf'
+	#!/bin/bash
 
-	hlfred $DSN init
-	hlfred $DSN drzi
-	hlfred $DSN mcat
-	hlfred $DSN saln
-	hlfred $DSN apsh
-	hlfred $DSN drzm
+	export HLFRED_DSDIR="/Volumes/DataRaid1/Data/DATASETS"
+	export HLFRED_RUNDIR="/Volumes/DataRaid1/Data/REDUCED"
+	DSN="test"
+
+	for task in init drzi mcat saln apsh drzm
+	do
+		hlfred $DSN $task
+		ret=$?
+		if [[ $ret = 0 ]]; then
+		    echo "HLFRED task ${task} completed"
+		else
+		    echo -e "\033[0;31mERROR: HLFRED task ${task} failed.\033[0m"
+			exit 1
+		fi
+	done

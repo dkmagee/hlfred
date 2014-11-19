@@ -1,5 +1,5 @@
 import pyfits
-from stwcs.wcsutil import HSTWCS
+from stwcs.wcsutil import headerlet, HSTWCS
 from drizzlepac import updatehdr
 from drizzlepac import tweakback
 import glob
@@ -49,3 +49,4 @@ def applyOffsets(infiles, sa_in, sa_out, outfile):
             print 'Updating %s with mean offset' % fl
             updatehdr.updatewcs_with_shift(vdrz, vdrz, wcsname='DRZWCS', xsh=mdx, ysh=mdy, rot=mdt, scale=1.0, force=True)
             tweakback.tweakback(vdrz, input=fl, wcsname='DRZWCS_1', verbose=True)
+            headerlet.write_headerlet(fl, k.upper(), output=None, sciext='SCI', wcsname='DRZWCS_1', wcskey='PRIMARY', destim=None, sipname=None, npolfile=None, d2imfile=None, author=None, descrip=None, history=None, nmatch=None, catalog=None, attach=True, clobber=False, logging=False)
