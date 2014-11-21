@@ -12,11 +12,13 @@ task = os.path.basename(__name__).split('.')[-1][4:]
 @click.option('--sin', default='superalign.in', help='Superalign input file')
 @click.option('--sout', default='offsets.cat', help='Superalign output offsets file')
 @click.option('--sfile', default='shifts.cat', help='Output shift file')
+@click.option('--plot/--noplot', default=True, help='Make plots for checking alignment')
+@click.option('--check', is_flag=True, help='Just check alignment and do not apply offsets')
 @click.option('--itype', default='_drz_sci.fits', help='Input file type')
 @click.option('--otype', default='_flt.fits', help='Output file type')
 @click.option('--ptask', default='saln', help='Previous task run')
 @pass_context
-def cli(ctx, sin, sout, sfile, itype, otype, ptask):
+def cli(ctx, sin, sout, sfile, plot, check, itype, otype, ptask):
     """
     Applies offsets to images computed by superalign
     """
@@ -36,12 +38,22 @@ def cli(ctx, sin, sout, sfile, itype, otype, ptask):
     tcfg['otype'] = otype
     tcfg['stime'] = ctx.dt()
     tcfg['completed'] = False
+    refimg = cfg['refimg']
     
     images = utils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
-    ctx.vlog('Applying offsets')
     try:
-        apply_shift.applyOffsets(infiles, sin, sout, sfile)
+        ctx.vlog('Computing offsets')
+        ashift = apply_shift.Offsets(infiles, sin, sout, sfile, refimg)
+        ctx.vlog('Checking offsets')
+        checks = ashift.checkOffsets(plot=plot)
+        tcfg['checks'] = checks
+        if not check:
+            ctx.vlog('Applying offsets')
+            ashift.applyOffsets()
+        else:
+            ctx.wlog('Offsets have not been applied')
+            utils.wConfig(cfg, cfgf)
     except Exception, e:
         utils.wConfig(cfg, cfgf)
         print e
