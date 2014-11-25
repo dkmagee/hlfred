@@ -32,14 +32,21 @@ def cli(ctx, itype, otype, ptask):
     
     images = utils.imgList(cfg['images'], onlyacs=useacs)
     infiles = [str('%s%s' % (i, itype)) for i in images]
+    refwht = None
     if not refimg:
         # For now if a reference image is not given just use the first image
         # TODO Need to determine best image to use for the reference image from the input list if no refimg is given
         refimg = infiles[0]
+        refwht = refimg.replace('drz_sci.fits', 'drz_wht.fits')
         cfg['refimg'] = refimg
     mkcat = make_catalog.MakeCat(refimg)
     
     n = len(infiles)
+    instdet = utils.getInstDet(reffile)
+    if refwht:
+        mkcat.makeSACat(refimg, instdet, weightfile=refwht)
+    else:
+        mkcat.makeSACat(refimg, instdet)
     for i, inf in enumerate(infiles):
         ctx.vlog('Generating catalog for image %s - %s of %s', inf, i+1, n)
         whtf = inf.replace('sci', 'wht')

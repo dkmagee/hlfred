@@ -2,8 +2,9 @@ import pyfits
 from stwcs.wcsutil import headerlet, HSTWCS
 from drizzlepac import updatehdr
 from drizzlepac import tweakback
-import numpy as N
+import numpy as np
 from scipy.spatial import cKDTree
+from hlfred.utils import utils
 import glob, sys
 import matplotlib.pyplot as plt
 
@@ -52,19 +53,19 @@ class Offsets(object):
 
     def checkOffsets(self, scat='sources.cat', search_radius=0.001, plot=True):
         """Checks offsets computed by superalign"""
-        rcat = N.genfromtxt(scat, usecols=(1,2))
+        rcat = np.genfromtxt(scat, usecols=(1,2))
         rrdcat = self.refwcs.wcs_pix2sky((rcat/self.refwcs.pscale) + self.refwcs.wcs.crpix, 1)
         robj = open(scat).readlines()
         self.checks = {}
         all_res = []
         for n,s in self.ishifts.iteritems():
             csf = n.replace('.fits', '.cat.stars')
-            icat = N.genfromtxt(csf, usecols=(1,2))
+            icat = np.genfromtxt(csf, usecols=(1,2))
             wcs = HSTWCS(pyfits.open(n))
             dxp, dyp, dtp = self.ishifts[n]
-            dt = dtp*N.pi/180.0
-            dx = dxp*N.cos(dt) + dyp*N.sin(dt)
-            dy = dyp*N.cos(dt) - dxp*N.sin(dt)
+            dt = dtp*np.pi/180.0
+            dx = dxp*np.cos(dt) + dyp*np.sin(dt)
+            dy = dyp*np.cos(dt) - dxp*np.sin(dt)
             ipix = icat/self.refwcs.pscale + wcs.wcs.crpix - [dx, dy]
             irdcat = wcs.wcs_pix2sky(ipix, 1)
             iobj = open(csf).readlines()
@@ -81,7 +82,9 @@ class Offsets(object):
                     drd = (rrdcat[i] - irdcat[j[0]])*3600
                     dra.append(drd[0])
                     ddec.append(drd[1])
-            residuals = [round(N.median(N.array(dra)), 5), round(N.median(N.array(ddec)), 5)]
+            resx = utils.iterstat(np.array(dra))
+            resy = utils.iterstat(np.array(ddec))
+            residuals = [round(resx[2], 5), round(resy[2], 5)]
             self.checks[n] = residuals
             all_res.append(residuals)
             rx = 'dRA={:+.5f}'.format(residuals[0])
@@ -99,7 +102,7 @@ class Offsets(object):
                 plt.savefig(n.replace('.fits', '_plot.pdf'))
                 plt.close()
         if plot:
-            res = N.array(all_res)
+            res = np.array(all_res)
             plt.scatter(res[:,0], res[:,1], s=5, c='k')
             plt.xlabel('dRA')
             plt.ylabel('dDec')

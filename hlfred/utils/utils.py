@@ -4,6 +4,7 @@ import pyfits
 import pywcs
 import json
 from itertools import chain
+import numpy as np
 
 sciexts = {'wfc3ir':[1], 'wfc3uvis':[1,4], 'acswfc':[1,4]}
 
