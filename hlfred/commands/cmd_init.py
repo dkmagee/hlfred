@@ -24,7 +24,7 @@ def cli(ctx):
     tcfg['completed'] = False
     dsdir = os.path.join(ctx.dsdir, dsn)
     if not os.path.isdir(dsdir):
-        click.elog('Input dataset %s not found! Bye.', dsdir)
+        ctx.elog('Input dataset %s not found! Bye.', dsdir)
         sys.exit(1)
     procdir = cfg['procdir'] = os.path.join(ctx.rundir, dsn)
     infiles = cfg['infiles'] = glob.glob(os.path.join(dsdir, '*_flt.fits')) + glob.glob(os.path.join(dsdir, '*_flc.fits'))
@@ -46,11 +46,11 @@ def cli(ctx):
                 shutil.copy(f, fn)
                 outfiles.append(fn)
             except shutil.Error as e:
-                click.elog('Error: %s', e)
+                ctx.elog('Error: %s', e)
                 # eg. source or destination doesn't exist
                 raise
             except IOError as e:
-                click.elog('Error: %s', e.strerror)
+                ctx.elog('Error: %s', e.strerror)
                 raise
         else:
             outfiles.append(fn)
