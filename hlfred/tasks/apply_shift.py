@@ -56,6 +56,7 @@ class Offsets(object):
         rrdcat = self.refwcs.wcs_pix2sky((rcat/self.refwcs.pscale) + self.refwcs.wcs.crpix, 1)
         robj = open(scat).readlines()
         self.checks = {}
+        all_res = []
         for n,s in self.ishifts.iteritems():
             csf = n.replace('.fits', '.cat.stars')
             icat = N.genfromtxt(csf, usecols=(1,2))
@@ -82,10 +83,11 @@ class Offsets(object):
                     ddec.append(drd[1])
             residuals = [round(N.median(N.array(dra)), 5), round(N.median(N.array(ddec)), 5)]
             self.checks[n] = residuals
+            all_res.append(residuals)
             rx = 'dRA={:+.5f}'.format(residuals[0])
             ry = 'dDec={:+.5f}'.format(residuals[1])
             print n, rx, ry
-            # plot
+            # plot alignment check for each image
             if plot:
                 plt.scatter(rrdcat[:,0], rrdcat[:,1], s=50, c='r', alpha=0.5)
                 plt.scatter(irdcat[:,0], irdcat[:,1], s=5, c='k')
@@ -96,6 +98,20 @@ class Offsets(object):
                 plt.annotate(ry, xy=(.8,.05), xycoords='axes fraction')
                 plt.savefig(n.replace('.fits', '_plot.pdf'))
                 plt.close()
+        if plot:
+            res = N.array(all_res)
+            plt.scatter(res[:,0], res[:,1], s=5, c='k')
+            plt.xlabel('dRA')
+            plt.ylabel('dDec')
+            plt.title('Relative Alignment - All Images')
+            plt.axes().set_aspect('equal')
+            plt.xlim(-0.1, 0.1)
+            plt.ylim(-0.1, 0.1)
+            plt.grid(True)
+            # plt.annotate(rx , xy=(.8,.1), xycoords='axes fraction')
+            # plt.annotate(ry, xy=(.8,.05), xycoords='axes fraction')
+            plt.savefig('offset_residuals_plot.pdf')
+            plt.close()
         return self.checks
     
     def applyOffsets(self):

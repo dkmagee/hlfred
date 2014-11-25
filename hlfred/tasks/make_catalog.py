@@ -14,7 +14,7 @@ _sa_config = {
                 'lower_pixthresh':3.75,
                 'orient_adj':2.5
         },
-        'wfc3uv':{
+        'wfc3uvis':{
                 'low_limit':1.55,
                 'hi_limit': 20.0,
                 'min_axis_ratio':0.33,

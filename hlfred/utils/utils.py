@@ -47,3 +47,59 @@ def getFilter(fitsfile):
     else:
         ftr = fits.getval(fitsfile, 'filter')
     return ftr.lower()
+
+def iterstat(inputarr, sigrej=3.0, maxiter=10, mask=0, max='', min='', rejval=''):
+    ### routine for iterative sigma-clipping
+    ngood    = inputarr.size
+    arrshape = inputarr.shape
+    if ngood == 0: 
+        print 'no data points given'
+        return 0, 0, 0, 0
+    if ngood == 1:
+        print 'only one data point; cannot compute stats'
+        return 0, 0, 0, 0
+
+    #determine max and min
+    if max == '':
+        max = inputarr.max()
+    if min == '':
+        min = inputarr.min()
+
+    if np.unique(inputarr).size == 1:
+        return 0, 0, 0, 0
+
+    mask  = np.zeros(arrshape, dtype=np.byte)+1
+    #reject those above max and those below min
+    mask[inputarr > max] = 0
+    mask[inputarr < min] = 0
+    if rejval != '' :
+        mask[inputarr == rejval]=0
+    fmean = np.sum(1.*inputarr*mask) / ngood
+    fsig  = np.sqrt(np.sum((1.*inputarr-fmean)**2*mask) / (ngood-1))
+
+    nlast = -1
+    iter  =  0
+    ngood = np.sum(mask)
+    if ngood < 2:
+        return -1, -1, -1, -1
+
+    while (iter < maxiter) and (nlast != ngood) and (ngood >= 2) :
+        loval = fmean - sigrej*fsig
+        hival = fmean + sigrej*fsig
+        nlast = ngood
+        
+        mask[inputarr < loval] = 0
+        mask[inputarr > hival] = 0
+        ngood = np.sum(mask)
+
+        if ngood >= 2:
+            fmean = np.sum(1.*inputarr*mask) / ngood
+            fsig  = np.sqrt(np.sum((1.*inputarr-fmean)**2*mask) / (ngood-1))
+
+    savemask = mask.copy()
+    iter = iter+1
+    if np.sum(savemask) > 2:
+        fmedian = np.median(inputarr[savemask == 1])
+    else:
+        fmedian = fmean
+    return fmean, fsig, fmedian, savemask

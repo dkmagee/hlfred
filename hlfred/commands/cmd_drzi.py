@@ -30,8 +30,10 @@ def cli(ctx, itype, otype, ptask):
     tcfg['completed'] = False
     images = utils.imgList(cfg['images'], onlyacs=useacs)
     infiles = [str('%s%s' % (i, itype)) for i in images]
-    for f in infiles:
-        ctx.vlog('Drizzling image %s', f)
+    
+    n = len(infiles)
+    for i, f in enumerate(infiles):
+        ctx.vlog('Drizzling image %s - %s of %s', f, i+1, n)
         try:
             drizzle_image.drzImage(f)
         except Exception, e:

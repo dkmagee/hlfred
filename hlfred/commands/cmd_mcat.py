@@ -38,8 +38,10 @@ def cli(ctx, itype, otype, ptask):
         refimg = infiles[0]
         cfg['refimg'] = refimg
     mkcat = make_catalog.MakeCat(refimg)
-    for inf in infiles:
-        ctx.vlog('Generating catalog for image %s', inf)
+    
+    n = len(infiles)
+    for i, inf in enumerate(infiles):
+        ctx.vlog('Generating catalog for image %s - %s of %s', inf, i+1, n)
         whtf = inf.replace('sci', 'wht')
         instdet = utils.getInstDet(inf)
         mkcat.makeSACat(inf, instdet, weightfile=whtf)
