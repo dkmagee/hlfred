@@ -173,24 +173,25 @@ class MakeCat(object):
         print 'Found %s sources' % len(cleanobjectlist)
         wcs = HSTWCS(pyfits.open(imgfile))
         for obj in cleanobjectlist:
-            sky = wcs.wcs_pix2sky(np.array([[obj.x, obj.y]]),1)
+            sky = wcs.wcs_pix2sky(np.array([[obj.x, obj.y]]), 1)
             o_radec.append([obj.ra[0], obj.dec[0]])
             obj.ra = sky[0][0]
             obj.dec = sky[0][1]
     
-        imgout = open(imgfile_reg, 'w')
-        imgout.write('global color=green font="helvetica 8 normal" edit=1 move=1 delete=1 include=1 fixed=0\nfk5\n')
+        regout = open(imgfile_reg, 'w')
+        regout.write('global color=green font="helvetica 8 normal" edit=1 move=1 delete=1 include=1 fixed=0\nfk5\n')
         for i,rd in enumerate(o_radec):
             oid = i+1
-            imgout.write('circle(%s,%s,%s") # color=%s text={%s}\n' % (rd[0], rd[1], 0.5, 'red', oid))
-        imgout.close()
+            regout.write('circle(%s,%s,%s") # color=%s text={%s}\n' % (rd[0], rd[1], 0.5, 'red', oid))
+        regout.close()
     
-        # Now we need to write out the image catalog in the reference image coords in pixels with respect to crpix
-        imgout = open(imgfile_cat, 'w')
+        # Now we need to write out the catalog in the reference image coords in arcseconds with respect to center of the reference image
+        catout = open(imgfile_cat, 'w')
         for i,obj in enumerate(cleanobjectlist):
             oid = i+1
-            pix = (wcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - wcs.wcs.crpix) * self.refwcs.pscale
-            imgout.write('%i %f %f %f\n' % (oid, np.round(pix[0][0], 3), np.round(pix[0][1], 3), np.round(obj.mag, 1)))
-        imgout.close()
+            # arcs = (wcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - wcs.wcs.crpix) * self.refwcs.pscale
+            arcs = (self.refwcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - self.refwcs.wcs.crpix) * self.refwcs.pscale
+            catout.write('%i %f %f %f\n' % (oid, np.round(arcs[0][0], 3), np.round(arcs[0][1], 3), np.round(obj.mag, 1)))
+        catout.close()
         return
 

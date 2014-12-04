@@ -42,11 +42,11 @@ def cli(ctx, itype, otype, ptask):
     mkcat = make_catalog.MakeCat(refimg)
     
     n = len(infiles)
-    instdet = utils.getInstDet(reffile)
-    if refwht:
-        mkcat.makeSACat(refimg, instdet, weightfile=refwht)
-    else:
-        mkcat.makeSACat(refimg, instdet)
+    # instdet = utils.getInstDet(reffile)
+    # if refwht:
+    #     mkcat.makeSACat(refimg, instdet, weightfile=refwht)
+    # else:
+    #     mkcat.makeSACat(refimg, instdet)
     for i, inf in enumerate(infiles):
         ctx.vlog('Generating catalog for image %s - %s of %s', inf, i+1, n)
         whtf = inf.replace('sci', 'wht')

@@ -32,14 +32,17 @@ class Offsets(object):
         self.ishifts = {}
         with open(self.outfile, 'w') as sfile:
             for drz in self.infiles:
-                wcs = HSTWCS(pyfits.open(drz))
+                # wcs = HSTWCS(pyfits.open(drz))
                 dsn = drz.replace('_drz_sci.fits', '')
-                dx = self.sai[dsn][0] - self.sao[dsn][0]
-                dy = self.sai[dsn][1] - self.sao[dsn][1]
-                dt = self.sai[dsn][2] - self.sao[dsn][2]
-                dxp = round(dx/wcs.pscale, 3)
-                dyp = round(dy/wcs.pscale, 3)
-                dtp = round(dt, 3)
+                # dx = self.sai[dsn][0] - self.sao[dsn][0]
+                # dy = self.sai[dsn][1] - self.sao[dsn][1]
+                # dt = self.sai[dsn][2] - self.sao[dsn][2]
+                # dxp = round(dx/wcs.pscale, 3)
+                # dyp = round(dy/wcs.pscale, 3)
+                # dtp = round(dt, 3)
+                dxp = round(-self.sao[dsn][0]/self.refwcs.pscale, 3)
+                dyp = round(-self.sao[dsn][1]/self.refwcs.pscale, 3)
+                dtp = round(-self.sao[dsn][2], 3)
                 sfo = '%s %f %f %f\n' % (dsn, dxp, dyp, dtp)
                 sfile.write(sfo)
                 self.ishifts[drz] = [dxp, dyp, dtp]
@@ -66,8 +69,8 @@ class Offsets(object):
             dt = dtp*np.pi/180.0
             dx = dxp*np.cos(dt) + dyp*np.sin(dt)
             dy = dyp*np.cos(dt) - dxp*np.sin(dt)
-            ipix = icat/self.refwcs.pscale + wcs.wcs.crpix - [dx, dy]
-            irdcat = wcs.wcs_pix2sky(ipix, 1)
+            ipix = icat/self.refwcs.pscale + self.refwcs.wcs.crpix - [dx, dy]
+            irdcat = self.refwcs.wcs_pix2sky(ipix, 1)
             iobj = open(csf).readlines()
             kdr = cKDTree(rrdcat)
             kdi= cKDTree(irdcat)
