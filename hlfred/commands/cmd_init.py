@@ -36,24 +36,30 @@ def cli(ctx):
             raise
     os.chdir(procdir)
     outfiles = []
-    for f in infiles:
-        fn = os.path.basename(f)
-        if '_flc.fits' in fn:
-            fn = fn.replace('_flc.fits', '_flt.fits')
-        if not os.path.exists(fn):
-            try:
-                ctx.vlog('Copying %s to %s', f, dsn+'/'+fn)
-                shutil.copy(f, fn)
+    n = len(infiles)
+    with click.progressbar(infiles, label='Copying images to run directory') as pbar:
+        for i, f in enumerate(pbar):
+            fn = os.path.basename(f)
+            if '_flc.fits' in fn:
+                fn = fn.replace('_flc.fits', '_flt.fits')
+            if not os.path.exists(fn):
+                try:
+                    ctx.vlog('\nCopying image %s of %s to %s', i+1, n, dsn)
+                    shutil.copy(f, fn)
+                    outfiles.append(fn)
+                    masks = glob.glob(f.replace('.fits', '_SCI_?.reg'))
+                    if masks:
+                        for m in masks:
+                            shutil.copy(m, os.path.basename(m))
+                except shutil.Error as e:
+                    ctx.elog('Error: %s', e)
+                    # eg. source or destination doesn't exist
+                    raise
+                except IOError as e:
+                    ctx.elog('Error: %s', e.strerror)
+                    raise
+            else:
                 outfiles.append(fn)
-            except shutil.Error as e:
-                ctx.elog('Error: %s', e)
-                # eg. source or destination doesn't exist
-                raise
-            except IOError as e:
-                ctx.elog('Error: %s', e.strerror)
-                raise
-        else:
-            outfiles.append(fn)
     images = {}
     for f in outfiles:
         ctx.vlog('Preping fits file %s for pipeline run', f)

@@ -1,6 +1,6 @@
 import numpy as np
 import pyfits
-from astropy.io import fits
+from astropy.io import fits, ascii
 from stwcs.wcsutil import HSTWCS
 from hlfred.utils import sextractor
 import os
@@ -85,15 +85,15 @@ class Object:
 class MakeCat(object):
     def __init__(self, refimg):
         super(MakeCat, self).__init__()
-        self.refimg = refimg
-        self.refwcs = HSTWCS(pyfits.open(self.refimg))
+        self.refimg = str(refimg)
+        self.refwcs = HSTWCS(self.refimg)
         
     def getInstDet(self, imgfile):
         """Get the instrument/detector of an HST image (e.g. acswfc)"""
         hdr = fits.getheader(imgfile)
         return '%s%s' % (hdr['instrume'].lower(), hdr['detector'].lower())
 
-    def findSources(self, inputfile, outputfile, instdet, weightfile=None, **sconfig):
+    def findSources(self, inputfile, outputfile, instdet, weightfile=None, extref=False, **sconfig):
         """Finds objects in image"""
         # Set up SExtractor
         sex = sextractor.SExtractor()
@@ -108,7 +108,7 @@ class MakeCat(object):
             rmsfile = weightfile.replace('wht.fits', 'rms.fits')
             if not os.path.exists(rmsfile):
                 fobj = fits.open(weightfile)
-                fobj[0].data = 1/np.sqrt(fobj[0].data)
+                fobj[0].data = 1/np.sqrt(fobj[0].data).astype(np.float32)
                 fobj.writeto(rmsfile, clobber=True)
             sex.config['WEIGHT_IMAGE'] = rmsfile
             sex.config['WEIGHT_TYPE'] = 'MAP_RMS'
@@ -120,6 +120,13 @@ class MakeCat(object):
             sex.config['PARAMETERS_LIST'].append(p)
         # Run SExtractor
         sex.run(inputfile)
+        cfg = _sa_config[instdet]
+        low_limit = cfg['low_limit']
+        hi_limit = cfg['hi_limit']
+        # if reference image scale is less than 0.05"/pix we need to increase the low and hi limits for selecting objects for alignment"
+        # if self.refwcs.pscale < 0.05:
+        #     low_limit *= 1.2
+        #     hi_limit  *= 1.6
         objectlist = []
         for l in [i.split() for i in open(outputfile).readlines()]:
             if l[0] != '#':
@@ -136,10 +143,10 @@ class MakeCat(object):
                 m = float(l[7])
                 f = float(l[8])
                 fwhm = float(l[9])
-                cfg = _sa_config[instdet]
-                axis_ratio =  ba / aa
-                if min(2.3 * ba, fwhm) >= cfg['low_limit'] and max(2.3 * aa, fwhm) < cfg['hi_limit'] and r > cfg['min_axis_ratio']:
+                
+                if min(2.3 * ba, fwhm) >= low_limit and max(2.3 * aa, fwhm) < hi_limit and r > cfg['min_axis_ratio']:
                     objectlist.append(Object(x, y, ra, dec, r, m, f))
+                    
         return objectlist
 
     def removeCloseSources(self, objectlist):
@@ -160,7 +167,7 @@ class MakeCat(object):
                 print 'Excluding object at %i %i' % (objecti.x, objecti.y)
         return objectlist_keep
 
-    def makeSACat(self, imgfile, instdet, weightfile=None):
+    def makeSACat(self, imgfile, instdet, weightfile=None, extref=False):
         """Makes a catalog of objects to be used for input to superalign and creates a DS9 region file of objects"""
         
         imgfile_cat = '%s.cat' % imgfile.replace('.fits', '')
@@ -168,16 +175,17 @@ class MakeCat(object):
     
         o_radec = []
         ext = 0
-        objectlist = self.findSources('%s[%s]' % (imgfile, ext), imgfile_cat, instdet, weightfile)
+        objectlist = self.findSources('%s[%s]' % (imgfile, ext), imgfile_cat, instdet, weightfile, extref=extref)
         cleanobjectlist = self.removeCloseSources(objectlist)
         print 'Found %s sources' % len(cleanobjectlist)
-        wcs = HSTWCS(pyfits.open(imgfile))
+        wcs = HSTWCS(str(imgfile))
         for obj in cleanobjectlist:
             sky = wcs.wcs_pix2sky(np.array([[obj.x, obj.y]]), 1)
             o_radec.append([obj.ra[0], obj.dec[0]])
             obj.ra = sky[0][0]
             obj.dec = sky[0][1]
-    
+        
+        # Write out a ds9 region file of object selected for alignment
         regout = open(imgfile_reg, 'w')
         regout.write('global color=green font="helvetica 8 normal" edit=1 move=1 delete=1 include=1 fixed=0\nfk5\n')
         for i,rd in enumerate(o_radec):
@@ -185,13 +193,22 @@ class MakeCat(object):
             regout.write('circle(%s,%s,%s") # color=%s text={%s}\n' % (rd[0], rd[1], 0.5, 'red', oid))
         regout.close()
     
-        # Now we need to write out the catalog in the reference image coords in arcseconds with respect to center of the reference image
+        # Now we need to write out the catalog in the reference image coords in arcseconds with respect to center of the image
         catout = open(imgfile_cat, 'w')
         for i,obj in enumerate(cleanobjectlist):
             oid = i+1
-            # arcs = (wcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - wcs.wcs.crpix) * self.refwcs.pscale
-            arcs = (self.refwcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - self.refwcs.wcs.crpix) * self.refwcs.pscale
+            arcs = (wcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - [wcs.naxis1/2, wcs.naxis2/2]) * wcs.pscale
             catout.write('%i %f %f %f\n' % (oid, np.round(arcs[0][0], 3), np.round(arcs[0][1], 3), np.round(obj.mag, 1)))
         catout.close()
+        return
+    
+    def makeSACatExtRef(self, refcat, outcat):
+        """
+        Makes a catalog of objects to be used for input to superalign from a external reference catalog.
+        Catalog should be of form: ID RA(deg) Dec(deg) Mag
+        """
+        data = ascii.read(refcat, names=['id', 'ra', 'dec', 'mag'])
+        arcs = (self.refwcs.wcs_sky2pix(zip(data['ra'], data['dec']), 1) - [self.refwcs.naxis1/2, self.refwcs.naxis2/2])*self.refwcs.pscale
+        ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
         return
 

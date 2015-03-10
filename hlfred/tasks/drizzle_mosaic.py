@@ -1,7 +1,7 @@
 from drizzlepac import astrodrizzle
 from stwcs.wcsutil import headerlet, HSTWCS
 
-def drzMosaic(infiles, outfile, usehlet=False, ctype='minmed'):
+def drzMosaic(infiles, outfile, refimg=None, usehlet=False, ctype='imedian'):
     """Run full AstroDrizzle"""
     if usehlet:
         for flt in infiles:
@@ -15,6 +15,8 @@ def drzMosaic(infiles, outfile, usehlet=False, ctype='minmed'):
         context=False,
         wcskey='DRZWCS_1',
         combine_type=ctype,
+        driz_combine=False,
         final_wcs=True,
-        final_rot=0
+        final_refimage=refimg,
+        final_pixfrac=0.75
     )

@@ -23,7 +23,6 @@ def cli(ctx, itype, ofile, ptask):
     os.chdir(procdir)
     cfgf = '%s_cfg.json' % dsn
     cfg = utils.rConfig(cfgf)
-    refimg = ctx.refimg
     tcfg = cfg['tasks'][task] = {}
     tcfg['ptask'] = ptask
     tcfg['itype'] = itype
@@ -34,20 +33,25 @@ def cli(ctx, itype, ofile, ptask):
     images = utils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
     refimg = cfg['refimg']
+    refcat = cfg['refcat_sa']
     refwcs = HSTWCS(pyfits.open(refimg))
     ctx.vlog('Generating the superalign input')
-    refcat = refimg.replace('.fits', '.cat')
     super_align.makeSAin(infiles, refwcs, refcat)
-    cmd = 'superalign superalign.in sources.cat %s' % ofile
-    ctx.vlog('Running: %s', cmd)
-
     try:
-        super_align.runSuperAlign(cmd)
+        sa_cmd = 'superalign_hlf superalign.in sources.cat %s' % ofile
+        ctx.vlog('Running: %s', sa_cmd)
+        super_align.runSuperAlign(sa_cmd)
     except Exception, e:
         utils.wConfig(cfg, cfgf)
         print e
         raise
-
+    try:
+        ctx.vlog('Running simplematch')
+        super_align.runSimpleMatch()
+    except Exception, e:
+        utils.wConfig(cfg, cfgf)
+        print e
+        raise
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)

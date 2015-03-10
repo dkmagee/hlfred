@@ -13,6 +13,7 @@ class Context(object):
         self.rundir = None 
         self.dataset_name = None
         self.refimg = None
+        self.refcat = None
         self.useacs = False
 
     def log(self, msg, *args):
@@ -38,8 +39,7 @@ class Context(object):
         if not self.verbose:
             if args:
                 msg %= args
-            click.secho(msg, file=sys.stderr, fg='green')
-            
+            click.secho(msg, file=sys.stderr, fg='green')   
     
     def dt(self):
         """Returns current time as string."""
@@ -76,17 +76,17 @@ class HLFRED_CLI(click.MultiCommand):
 @click.option('--dsdir',  type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='Input datasets directory (overrides HLFRED_DSDIR enviroment variable)')
 @click.option('--rundir', type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='Dataset run directory (overrides HLFRED_RUNDIR enviroment variable)')
 @click.option('-r', '--refimg', default='', help='Reference image for alignment')
+@click.option('-c', '--refcat', default='', help='Reference catalog for alignment')
 @click.option('-a', '--useacs', is_flag=True, help='Use only ACS/WFC images for alignment')
 @click.option('-v', '--verbose', is_flag=True, help='Disables verbose mode')
 @pass_context
-def cli(ctx, dataset_name, dsdir, rundir, verbose, refimg, useacs):
+def cli(ctx, dataset_name, dsdir, rundir, verbose, refimg, refcat, useacs):
     """The HLDFRED command line interface."""
     ctx.dataset_name = dataset_name
-    ctx.verbose = verbose
     dsdir_env = os.getenv('HLFRED_DSDIR')
     if not dsdir_env:
         if not dsdir:
-            click.echo('No input dataset directory set. Must be set in the HLFRED_DSDIR enviroment variable or as an option (--dsdir).')
+            ctx.elog('No input dataset directory set. Must be set in the HLFRED_DSDIR enviroment variable or as an option (--dsdir).')
             sys.exit(1)
         else:
             ctx.dsdir = dsdir
@@ -96,13 +96,25 @@ def cli(ctx, dataset_name, dsdir, rundir, verbose, refimg, useacs):
     rundir_env = os.getenv('HLFRED_RUNDIR')
     if not rundir_env:
         if not rundir:
-            click.echo('No running directory set. Must be set in the HLFRED_RUNDIR enviroment variable or as an option (--rundir).')
+            ctx.elog('No running directory set. Must be set in the HLFRED_RUNDIR enviroment variable or as an option (--rundir).')
             sys.exit(1)
         else:
             ctx.rundir = rundir
     else:
         ctx.rundir = rundir_env
     ctx.log('HLFRED will use %s as the run directory', ctx.rundir)
+    if refimg:
+        if not os.path.exists(refimg):
+            ctx.elog('Reference image %s not found!' % refimg)
+            sys.exit(1)
+        else:
+            ctx.refimg = refimg
+    if refcat:
+        if not os.path.exists(refcat):
+            ctx.elog('Reference catalog %s not found!' % refcat)
+            sys.exit(1)
+        else:
+            ctx.refcat = refcat
     ctx.verbose = verbose
     if not ctx.verbose:
         ctx.vlog('Verbose is enabled')

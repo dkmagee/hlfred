@@ -5,6 +5,7 @@ import pywcs
 import json
 from itertools import chain
 import numpy as np
+from stwcs.wcsutil import HSTWCS
 
 sciexts = {'wfc3ir':[1], 'wfc3uvis':[1,4], 'acswfc':[1,4]}
 
@@ -48,6 +49,11 @@ def getFilter(fitsfile):
     else:
         ftr = fits.getval(fitsfile, 'filter')
     return ftr.lower()
+
+def getPScale(fitsfile):
+    """Get plate scale of image"""
+    wcs = HSTWCS(pyfits.open(fitsfile))
+    return wcs.pscale
 
 def iterstat(inputarr, sigrej=3.0, maxiter=10, mask=0, max='', min='', rejval=''):
     ### routine for iterative sigma-clipping

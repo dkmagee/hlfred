@@ -23,6 +23,7 @@ def cli(ctx, itype, otype, ptask):
     cfgf = '%s_cfg.json' % dsn
     cfg = utils.rConfig(cfgf)
     refimg = ctx.refimg
+    refcat = ctx.refcat
     tcfg = cfg['tasks'][task] = {}
     tcfg['ptask'] = ptask
     tcfg['itype'] = itype
@@ -33,26 +34,42 @@ def cli(ctx, itype, otype, ptask):
     images = utils.imgList(cfg['images'], onlyacs=useacs)
     infiles = [str('%s%s' % (i, itype)) for i in images]
     refwht = None
+    extref = False
+    
+    if refimg:
+        extref = True
+    
     if not refimg:
-        # For now if a reference image is not given just use the first image
+        # For now if a reference image is not given just use one of the input images
         # TODO Need to determine best image to use for the reference image from the input list if no refimg is given
-        refimg = infiles[0]
+        refimg = infiles.pop()
         refwht = refimg.replace('drz_sci.fits', 'drz_wht.fits')
-        cfg['refimg'] = refimg
+        cfg['refimg'] = refimg 
+    
     mkcat = make_catalog.MakeCat(refimg)
+    if refcat:
+        cfg['refcat'] = refcat
+        refcat_sa = '%s_refcat.cat' % dsn
+        mkcat.makeSACatExtRef(refcat, refcat_sa)
+        cfg['refcat_sa'] = refcat_sa
+    else:
+        cfg['refcat_sa'] = refimg.replace('.fits', '.cat')
+        instdet = utils.getInstDet(refimg)
+        if extref:
+            ctx.vlog('Generating catalog for external reference image %s', refimg)
+            mkcat.makeSACat(refimg, instdet, weightfile=refwht, extref=True)
+        else:
+            ctx.vlog('Generating catalog for internal reference image %s', refimg)
+            mkcat.makeSACat(refimg, instdet, weightfile=refwht)
     
     n = len(infiles)
-    # instdet = utils.getInstDet(reffile)
-    # if refwht:
-    #     mkcat.makeSACat(refimg, instdet, weightfile=refwht)
-    # else:
-    #     mkcat.makeSACat(refimg, instdet)
-    for i, inf in enumerate(infiles):
-        ctx.vlog('Generating catalog for image %s - %s of %s', inf, i+1, n)
-        whtf = inf.replace('sci', 'wht')
-        instdet = utils.getInstDet(inf)
-        mkcat.makeSACat(inf, instdet, weightfile=whtf)
-    
+    with click.progressbar(infiles, label='Generating catalogs for images') as pbar:
+        for i, inf in enumerate(pbar):
+            ctx.vlog('\nGenerating catalog for image %s - %s of %s', inf, i+1, n)
+            whtf = inf.replace('sci', 'wht')
+            instdet = utils.getInstDet(inf)
+            mkcat.makeSACat(inf, instdet, weightfile=whtf)
+
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)

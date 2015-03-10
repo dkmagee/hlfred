@@ -10,7 +10,8 @@ task = os.path.basename(__name__).split('.')[-1][4:]
 
 @click.command(task, short_help='Apply shifts to images')
 @click.option('--sin', default='superalign.in', help='Superalign input file')
-@click.option('--sout', default='offsets.cat', help='Superalign output offsets file')
+# @click.option('--sout', default='offsets.cat', help='Superalign output offsets file')
+@click.option('--sout', default='simplematch.out', help='Simplematch output offsets file')
 @click.option('--sfile', default='shifts.cat', help='Output shift file')
 @click.option('--plot/--noplot', default=True, help='Make plots for checking alignment')
 @click.option('--check', is_flag=True, help='Just check alignment and do not apply offsets')
@@ -45,9 +46,9 @@ def cli(ctx, sin, sout, sfile, plot, check, itype, otype, ptask):
     try:
         ctx.vlog('Computing offsets')
         ashift = apply_shift.Offsets(infiles, sin, sout, sfile, refimg)
-        ctx.vlog('Checking offsets')
-        checks = ashift.checkOffsets(plot=plot)
-        tcfg['checks'] = checks
+        # ctx.vlog('Checking offsets')
+        # checks = ashift.checkOffsets(plot=plot)
+        # tcfg['checks'] = checks
         if not check:
             ctx.vlog('Applying offsets')
             ashift.applyOffsets()
