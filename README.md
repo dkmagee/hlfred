@@ -41,7 +41,7 @@ Here's a simple shell script to run all tasks with the input data in a directory
 	export HLFRED_RUNDIR="/Volumes/DataRaid1/Data/REDUCED"
 	DSN="test"
 
-	for task in init drzi mcat saln apsh drzm
+	for task in init amsk drzi mcat saln apsh drzm
 	do
 		hlfred $DSN $task
 		ret=$?
