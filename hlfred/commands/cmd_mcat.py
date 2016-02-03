@@ -55,14 +55,14 @@ def cli(ctx, itype, otype, ptask):
         cfg['refcat_sa'] = refcat_sa
     else:
         cfg['refcat_sa'] = refimg.replace('.fits', '.cat')
-        # instdet = utils.getInstDet(refimg)
-        instdet = 'acswfc'
+        instdet = utils.getInstDet(refimg)
         if extref:
             ctx.vlog('Generating catalog for external reference image %s', refimg)
             mkcat.makeSACat(refimg, instdet, weightfile=None, extref=True)
         else:
             ctx.vlog('Generating catalog for internal reference image %s', refimg)
-            mkcat.makeSACat(refimg, instdet, weightfile=refwht)
+            mkcat.makeCat(refimg, instdet, weightfile=refwht)
+            mkcat.makeSACat(refimg)
     
     n = len(infiles)
     with click.progressbar(infiles, label='Generating catalogs for images') as pbar:
