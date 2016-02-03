@@ -9,25 +9,68 @@ from hlfred.utils import utils
 import glob, sys
 import matplotlib.pyplot as plt
 
+def restoreWCSdrz(img, ext):
+    wcs = HSTWCS(img, ext=ext, wcskey='A')
+    print 'Removing any previous alternative WCS for image %s[%s]' % (img, ext)
+    names = wcsnames(img, ext)
+    for k, n in names.iteritems():
+        if k not in [' ', 'O']:
+            deleteWCS(img, ext, wcskey=k, wcsname=n)
+
+    hdu = pyfits.open(img, mode='update')
+    hdu[ext].header['CD1_1'] = wcs.wcs.cd[0][0]
+    hdu[ext].header['CD1_2'] = wcs.wcs.cd[0][1]
+    hdu[ext].header['CD2_1'] = wcs.wcs.cd[1][0]
+    hdu[ext].header['CD2_2'] = wcs.wcs.cd[1][1]
+    hdu[ext].header['CRVAL1'] = wcs.wcs.crval[0]
+    hdu[ext].header['CRVAL2'] = wcs.wcs.crval[1]
+    hdu[ext].header['CRPIX1'] = wcs.wcs.crpix[0]
+    hdu[ext].header['CRPIX2'] = wcs.wcs.crpix[1]
+    hdu[ext].header['ORIENTAT'] = 0.0
+    hdu[ext].header['WCSNAME'] = 'DRZWCS'
+    del hdu[ext].header['LATPOLE']
+    del hdu[ext].header['LONPOLE']
+    hdu.flush()
+    
+def restoreWCSflt(img, origimg,  ext):
+    wcs = HSTWCS(origimg, ext=ext)
+    print 'Removing any previous alternative WCS for image %s[%s]' % (img, ext)
+    names = wcsnames(img, ext)
+    for k, n in names.iteritems():
+        if k not in [' ', 'O']:
+            deleteWCS(img, ext, wcskey=k, wcsname=n)
+
+    hdu = pyfits.open(img, mode='update')
+    hdu[ext].header['CD1_1'] = wcs.wcs.cd[0][0]
+    hdu[ext].header['CD1_2'] = wcs.wcs.cd[0][1]
+    hdu[ext].header['CD2_1'] = wcs.wcs.cd[1][0]
+    hdu[ext].header['CD2_2'] = wcs.wcs.cd[1][1]
+    hdu[ext].header['CRVAL1'] = wcs.wcs.crval[0]
+    hdu[ext].header['CRVAL2'] = wcs.wcs.crval[1]
+    hdu[ext].header['CRPIX1'] = wcs.wcs.crpix[0]
+    hdu[ext].header['CRPIX2'] = wcs.wcs.crpix[1]
+    hdu[ext].header['ORIENTAT'] = wcs.orientat
+    del hdu[ext].header['WCSNAME']
+    del hdu[ext].header['LATPOLE']
+    del hdu[ext].header['LONPOLE']
+    hdu.flush()
+
 class Offsets(object):
-    """Check and apply WCS offsets computed by superalign"""
-    def __init__(self, infiles, sa_in, sa_out, outfile, refimg):
+    """Check and apply WCS offsets computed by superalign and simplematch"""
+    def __init__(self, infiles, sa_in, sm_out, outfile, refimg):
         super(Offsets, self).__init__()
         self.infiles = infiles
         self.sa_in = sa_in
-        self.sa_out = sa_out
+        self.sm_out = sm_out
         self.outfile = outfile
         self.refimg = refimg
         self.refwcs = HSTWCS(pyfits.open(self.refimg))
         self.sai = {}
         self.sao = {}
-        # print 'Reading %s...' % sa_in
-        # for i in [j.split() for j in open(sa_in).readlines()[1:]]:
-        #     self.sai[i[0].replace('_drz_sci.cat', '')] = [float(i[1]), float(i[2]), float(i[3])]
     
-        print 'Reading %s...' % sa_out
-        for i in [j.split() for j in open(sa_out).readlines()]:
-            self.sao[i[0].replace('_drz_sci.cat', '')] = [float(i[1]), float(i[2]), float(i[3])]
+        print 'Reading %s...' % sm_out
+        for i in [j.split() for j in open(sm_out).readlines()]:
+            self.sao[i[0].replace('_drz_sci_sa.cat', '')] = [float(i[1]), float(i[2]), float(i[3])]
         
         self.vshifts = {}
         self.ishifts = {}
@@ -35,18 +78,12 @@ class Offsets(object):
             for drz in self.infiles:
                 wcs = HSTWCS(pyfits.open(drz))
                 dsn = drz.replace('_drz_sci.fits', '')
-                # dx = self.sai[dsn][0] - self.sao[dsn][0]
-                # dy = self.sai[dsn][1] - self.sao[dsn][1]
-                # dt = self.sai[dsn][2] - self.sao[dsn][2]
                 dx = self.sao[dsn][0]
                 dy = self.sao[dsn][1]
                 dt = self.sao[dsn][2]
                 dxp = round(dx/wcs.pscale, 3)
                 dyp = round(dy/wcs.pscale, 3)
                 dtp = round(dt, 3)
-                # dxp = round(-self.sao[dsn][0]/self.refwcs.pscale, 3)
-                # dyp = round(-self.sao[dsn][1]/self.refwcs.pscale, 3)
-                # dtp = round(-self.sao[dsn][2], 3)
                 sfo = '%s %f %f %f\n' % (dsn, dxp, dyp, dtp)
                 sfile.write(sfo)
                 self.ishifts[drz] = [dxp, dyp, dtp]
@@ -133,48 +170,20 @@ class Offsets(object):
             plt.close()
         return self.checks
     
-    def applyOffsets(self):
+    def applyOffsets(self, restore=False, dsdir=None, hlet=False):
         """Determine offsets from superalign input file and output offsets file and update the DRZ file"""
-        # for k,v in self.vshifts.iteritems():
-        #     mdx = sum(v[0])/len(v[0])
-        #     mdy = sum(v[1])/len(v[1])
-        #     mdt = sum(v[2])/len(v[2])
-        #     print 'Mean offsets for %s' % k
-        #     print 'dx: %s dy: %s dt: %s' % (mdx, mdy, mdt)
-        #     visdrzs = glob.glob('?%s???_drz_sci.fits' % k[1:])
-        #
-        #     for vdrz in visdrzs:
-        #         fl = vdrz.replace('drz_sci.fits', 'flt.fits')
-        #         print 'Updating %s with mean offset' % fl
-        #         updatehdr.updatewcs_with_shift(vdrz, vdrz, wcsname='DRZWCS', xsh=mdx, ysh=mdy, rot=mdt, scale=1.0, force=True)
-        #         tweakback.tweakback(vdrz, input=fl, wcsname='DRZWCS_1', verbose=True)
-        #         headerlet.write_headerlet(fl, k.upper(), output=None, sciext='SCI', wcsname='DRZWCS_1', wcskey='PRIMARY', destim=None, sipname=None, npolfile=None, d2imfile=None, author=None, descrip=None, history=None, nmatch=None, catalog=None, attach=True, clobber=False, logging=False)
-        
         for d, s in self.ishifts.iteritems():
             dx, dy, dt = s[0], s[1], s[2]
             fl = d.replace('drz_sci.fits', 'flt.fits')
-            print 'Updating flt drizzled image %s with offset' % d
-            # print 'Removing any previous alternative WCS'
-            # names = wcsnames(d, 0)
-            # for k, n in names.iteritems():
-            #     if k not in [' ', 'O', 'A']:
-            #         deleteWCS(d, 0, wcskey=k, wcsname=n)
-            #
-            # hdu = pyfits.open(d, mode='update')
-            # hdu[0].header['WCSNAME'] = hdu[0].header['WCSNAMEA']
-            # hdu.flush()
+            print 'Updating drizzled image %s with offset' % d
+            if restore:
+                restoreWCSdrz(drz, 0)
+                for ext in utils.sciexts[utils.getInstDet(fl)]:
+                    ofl = os.path.join(dsdir, fl)
+                    restoreWCSflt(fl, ofl, ext)
+            
             updatehdr.updatewcs_with_shift(d, d, wcsname='DRZWCS', xsh=dx, ysh=dy, rot=dt, scale=1.0, force=True)
             print 'Updating flt image %s with offset' % fl
-            # print 'Removing any previous alternative WCS'
-            # instdet = util.getInstDet(fl)
-            # for ext in util.sciext[instdet]:
-            #     names = wcsnames(fl, ext)
-            #     for k, n in names.iteritems():
-            #         if k not in [' ', 'O', 'A']:
-            #             deleteWCS(fl, ext, wcskey=k, wcsname=n)
-            #
-            #     hdu = pyfits.open(fl, ext=ext, mode='update')
-            #     hdu[ext].header['WCSNAME'] = hdu[ext].header['WCSNAMEA']
-            #     hdu.flush()
             tweakback.tweakback(d, input=fl, wcsname='DRZWCS_1', verbose=True, force=True)
-            # headerlet.write_headerlet(fl, d, output=None, sciext='SCI', wcsname='DRZWCS_1', wcskey='PRIMARY', destim=None, sipname=None, npolfile=None, d2imfile=None, author=None, descrip=None, history=None, nmatch=None, catalog=None, attach=True, clobber=False, logging=False)
+            if hlet:
+                headerlet.write_headerlet(fl, d, output=None, sciext='SCI', wcsname='DRZWCS_1', wcskey='PRIMARY', destim=None, sipname=None, npolfile=None, d2imfile=None, author=None, descrip=None, history=None, nmatch=None, catalog=None, attach=True, clobber=False, logging=False)

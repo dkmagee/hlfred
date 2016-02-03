@@ -28,7 +28,7 @@ def cli(ctx, itype, otype, ptask):
     tcfg['otype'] = otype
     tcfg['stime'] = ctx.dt()
     tcfg['completed'] = False
-    images = utils.imgList(cfg['images'], useacs=True)
+    images = utils.imgList(cfg['images'], onlyacs=True)
     if not images:
         print 'ampc can only be used on ACSWFC images'
     else:

@@ -15,7 +15,7 @@ def makeSAin(imgs, refwcs, refcat):
             sky = wcs.wcs_pix2sky([[wcs.naxis1/2, wcs.naxis2/2]], 1)
             arc = (refwcs.wcs_sky2pix(sky, 1) - [refwcs.naxis1/2, refwcs.naxis2/2]) * refwcs.pscale
             rot = round(refwcs.orientat - wcs.orientat, 3)
-            sa_in.write('%s %s %s %s\n' % (f.replace('.fits', '.cat'), round(arc[0][0], 3), round(arc[0][1], 3), rot))
+            sa_in.write('%s %s %s %s\n' % (f.replace('.fits', '_sa.cat'), round(arc[0][0], 3), round(arc[0][1], 3), rot))
     sa_in.close()
 
 def runSuperAlign(cmd):

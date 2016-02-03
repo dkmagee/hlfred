@@ -50,14 +50,16 @@ def cli(ctx, itype, otype, ptask):
     if refcat:
         cfg['refcat'] = refcat
         refcat_sa = '%s_refcat.cat' % dsn
+        ctx.vlog('Generating catalog from external reference catalog %s', refcat)
         mkcat.makeSACatExtRef(refcat, refcat_sa)
         cfg['refcat_sa'] = refcat_sa
     else:
         cfg['refcat_sa'] = refimg.replace('.fits', '.cat')
-        instdet = utils.getInstDet(refimg)
+        # instdet = utils.getInstDet(refimg)
+        instdet = 'acswfc'
         if extref:
             ctx.vlog('Generating catalog for external reference image %s', refimg)
-            mkcat.makeSACat(refimg, instdet, weightfile=refwht, extref=True)
+            mkcat.makeSACat(refimg, instdet, weightfile=None, extref=True)
         else:
             ctx.vlog('Generating catalog for internal reference image %s', refimg)
             mkcat.makeSACat(refimg, instdet, weightfile=refwht)
@@ -65,10 +67,11 @@ def cli(ctx, itype, otype, ptask):
     n = len(infiles)
     with click.progressbar(infiles, label='Generating catalogs for images') as pbar:
         for i, inf in enumerate(pbar):
-            ctx.vlog('\nGenerating catalog for image %s - %s of %s', inf, i+1, n)
+            ctx.vlog('\nGenerating catalogs for image %s - %s of %s', inf, i+1, n)
             whtf = inf.replace('sci', 'wht')
             instdet = utils.getInstDet(inf)
-            mkcat.makeSACat(inf, instdet, weightfile=whtf)
+            mkcat.makeCat(inf, instdet, weightfile=whtf)
+            mkcat.makeSACat(inf)
 
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True

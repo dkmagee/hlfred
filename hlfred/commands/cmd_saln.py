@@ -38,7 +38,7 @@ def cli(ctx, itype, ofile, ptask):
     ctx.vlog('Generating the superalign input')
     super_align.makeSAin(infiles, refwcs, refcat)
     try:
-        sa_cmd = 'superalign_hlf superalign.in sources.cat %s' % ofile
+        sa_cmd = 'superalign_hlf_wide_600 superalign.in sources.cat %s' % ofile
         ctx.vlog('Running: %s', sa_cmd)
         super_align.runSuperAlign(sa_cmd)
     except Exception, e:

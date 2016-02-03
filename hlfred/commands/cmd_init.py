@@ -47,7 +47,7 @@ def cli(ctx):
                     ctx.vlog('\nCopying image %s of %s to %s', i+1, n, dsn)
                     shutil.copy(f, fn)
                     outfiles.append(fn)
-                    masks = glob.glob(f.replace('.fits', '_SCI_?.reg'))
+                    masks = glob.glob(os.path.join(dsdir, '*.reg'))
                     if masks:
                         for m in masks:
                             shutil.copy(m, os.path.basename(m))

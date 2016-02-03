@@ -6,14 +6,16 @@ import sys, os, shutil, glob
 
 task = os.path.basename(__name__).split('.')[-1][4:]
 
-@click.command(task, short_help='Drizzle single images')
+@click.command(task, short_help='Drizzle final mosaic')
+@click.option('--optcr', is_flag=True, help='Run with 2-pass cr-rejection (minmed & median)')
+@click.option('--drzonly', is_flag=True, help='Only run astrodrizzle final combine')
 @click.option('--usehlet', is_flag=True, help='Use headerlets for updating WCS')
 @click.option('--ctype', default='imedian', help='Type of combine operation')
 @click.option('--itype', default='_flt.fits', help='Input file type')
 @click.option('--ofile', help='Output file (defaults to dsname_filter)')
 @click.option('--ptask', default='apsh', help='Previous task run')
 @pass_context
-def cli(ctx, usehlet, ctype, itype, ofile, ptask):
+def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
     """
     Drizzles final mosaic for each filter
     """
@@ -39,9 +41,9 @@ def cli(ctx, usehlet, ctype, itype, ofile, ptask):
             try:
                 if cfg['refimg']:
                     refimg = str(cfg['refimg'])
-                    drizzle_mosaic.drzMosaic(infiles, outfile, refimg=refimg, usehlet=usehlet, ctype=ctype)
+                    drizzle_mosaic.drzMosaic(infiles, outfile, refimg=refimg, optcr=optcr, drzonly=drzonly, usehlet=usehlet, ctype=ctype)
                 else:
-                    drizzle_mosaic.drzMosaic(infiles, outfile, usehlet=usehlet, ctype=ctype)
+                    drizzle_mosaic.drzMosaic(infiles, outfile, optcr=optcr, drzonly=drzonly, usehlet=usehlet, ctype=ctype)
             except Exception, e:
                 utils.wConfig(cfg, cfgf)
                 print e

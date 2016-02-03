@@ -10,16 +10,17 @@ task = os.path.basename(__name__).split('.')[-1][4:]
 
 @click.command(task, short_help='Apply shifts to images')
 @click.option('--sin', default='superalign.in', help='Superalign input file')
-# @click.option('--sout', default='offsets.cat', help='Superalign output offsets file')
 @click.option('--sout', default='simplematch.out', help='Simplematch output offsets file')
 @click.option('--sfile', default='shifts.cat', help='Output shift file')
+@click.option('--restore', is_flag=True, help='Restore original WCS before applying offset')
+@click.option('--hlet', is_flag=True, help='Create a headerlet file')
 @click.option('--plot/--noplot', default=True, help='Make plots for checking alignment')
 @click.option('--check', is_flag=True, help='Just check alignment and do not apply offsets')
 @click.option('--itype', default='_drz_sci.fits', help='Input file type')
 @click.option('--otype', default='_flt.fits', help='Output file type')
 @click.option('--ptask', default='saln', help='Previous task run')
 @pass_context
-def cli(ctx, sin, sout, sfile, plot, check, itype, otype, ptask):
+def cli(ctx, sin, sout, sfile, restore, hlet, plot, check, itype, otype, ptask):
     """
     Applies offsets to images computed by superalign
     """
@@ -51,7 +52,7 @@ def cli(ctx, sin, sout, sfile, plot, check, itype, otype, ptask):
         # tcfg['checks'] = checks
         if not check:
             ctx.vlog('Applying offsets')
-            ashift.applyOffsets()
+            ashift.applyOffsets(restore=restore, dsdir=ctx.dsdir, hlet=hlet)
         else:
             ctx.wlog('Offsets have not been applied')
             utils.wConfig(cfg, cfgf)

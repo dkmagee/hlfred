@@ -33,8 +33,11 @@ def cli(ctx, itype, otype, ptask):
         refimg = str(ctx.refimg)
         refwcs = HSTWCS(refimg)
         cfg['refimg'] = refimg
+        pscale = refwcs.pscale
+        orientat = refwcs.orientat
     else:
         pscale = None
+        orientat = 0
     images = utils.imgList(cfg['images'], onlyacs=useacs)
     infiles = [str('%s%s' % (i, itype)) for i in images]
     
@@ -43,7 +46,7 @@ def cli(ctx, itype, otype, ptask):
         for i, f in enumerate(pbar):
             ctx.vlog('\n\nDrizzling image %s - %s of %s', f, i+1, n)
             try:
-                drizzle_image.drzImage(f, refwcs.pscale, refwcs.orientat)
+                drizzle_image.drzImage(f, pscale, orientat)
             except Exception, e:
                 utils.wConfig(cfg, cfgf)
                 print e

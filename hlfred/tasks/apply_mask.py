@@ -28,8 +28,8 @@ class RegionFile:
 def updateDQArray(fitsimg, ext, poly_object):
     fin = pyfits.open(fitsimg, 'update')
     data = fin['dq', ext].data
-    for i in range(data.shape[0]):
-      for j in range(data.shape[1]):
+    for i in range(data.shape[1]):
+      for j in range(data.shape[0]):
         if poly_object.isInside(i+1, j+1):
             try:
                 data[j][i] |= 8192

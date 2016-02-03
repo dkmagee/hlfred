@@ -50,9 +50,9 @@ _sex_parms = [
 _sex_config = {
         'CATALOG_NAME':'sa_temp.cat',
         'CATALOG_TYPE':'ASCII_HEAD',
-        'DETECT_THRESH':10.0,
+        'DETECT_THRESH':6.0,
         'DETECT_MINAREA':3,
-        'ANALYSIS_THRESH':10.0,
+        'ANALYSIS_THRESH':6.0,
         'FILTER': 'N',
         'DEBLEND_NTHRESH':16,
         'DEBLEND_MINCONT':0.05,
@@ -123,10 +123,6 @@ class MakeCat(object):
         cfg = _sa_config[instdet]
         low_limit = cfg['low_limit']
         hi_limit = cfg['hi_limit']
-        # if reference image scale is less than 0.05"/pix we need to increase the low and hi limits for selecting objects for alignment"
-        # if self.refwcs.pscale < 0.05:
-        #     low_limit *= 1.2
-        #     hi_limit  *= 1.6
         objectlist = []
         for l in [i.split() for i in open(outputfile).readlines()]:
             if l[0] != '#':
@@ -143,7 +139,7 @@ class MakeCat(object):
                 m = float(l[7])
                 f = float(l[8])
                 fwhm = float(l[9])
-                
+
                 if min(2.3 * ba, fwhm) >= low_limit and max(2.3 * aa, fwhm) < hi_limit and r > cfg['min_axis_ratio']:
                     objectlist.append(Object(x, y, ra, dec, r, m, f))
                     
@@ -166,8 +162,9 @@ class MakeCat(object):
             else:
                 print 'Excluding object at %i %i' % (objecti.x, objecti.y)
         return objectlist_keep
-
-    def makeSACat(self, imgfile, instdet, weightfile=None, extref=False):
+    
+    
+    def makeCat(self, imgfile, instdet, weightfile=None, extref=False):
         """Makes a catalog of objects to be used for input to superalign and creates a DS9 region file of objects"""
         
         imgfile_cat = '%s.cat' % imgfile.replace('.fits', '')
@@ -197,9 +194,25 @@ class MakeCat(object):
         catout = open(imgfile_cat, 'w')
         for i,obj in enumerate(cleanobjectlist):
             oid = i+1
-            arcs = (wcs.wcs_sky2pix(np.array([[obj.ra, obj.dec]]), 1) - [wcs.naxis1/2, wcs.naxis2/2]) * wcs.pscale
-            catout.write('%i %f %f %f\n' % (oid, np.round(arcs[0][0], 3), np.round(arcs[0][1], 3), np.round(obj.mag, 1)))
+            catout.write('%i %.9f %.9f %.4f %.4f %.4f\n' % (oid, obj.ra, obj.dec, obj.x, obj.y, obj.mag))
         catout.close()
+        return
+    
+    def makeSACat(self, imgfile, extref=False):
+        """
+        Makes a catalog of objects to be used for input to superalign from a external reference catalog.
+        Catalog should be of form: ID RA(deg) Dec(deg) Mag
+        Output appends _sa
+        """
+        if extref:
+            wcs = self.refwcs
+        else:
+            wcs = HSTWCS(imgfile)
+        cat = imgfile.replace('.fits', '.cat')
+        outcat = imgfile.replace('.fits', '_sa.cat')
+        data = ascii.read(cat, names=['id', 'ra', 'dec', 'x', 'y', 'mag'])
+        arcs = (wcs.wcs_sky2pix(zip(data['ra'], data['dec']), 1) - [wcs.naxis1/2, wcs.naxis2/2])*wcs.pscale
+        ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
         return
     
     def makeSACatExtRef(self, refcat, outcat):
@@ -207,7 +220,7 @@ class MakeCat(object):
         Makes a catalog of objects to be used for input to superalign from a external reference catalog.
         Catalog should be of form: ID RA(deg) Dec(deg) Mag
         """
-        data = ascii.read(refcat, names=['id', 'ra', 'dec', 'mag'])
+        data = ascii.read(refcat, names=['id', 'ra', 'dec', 'x', 'y', 'mag'])
         arcs = (self.refwcs.wcs_sky2pix(zip(data['ra'], data['dec']), 1) - [self.refwcs.naxis1/2, self.refwcs.naxis2/2])*self.refwcs.pscale
         ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
         return
