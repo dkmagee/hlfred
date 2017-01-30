@@ -1,6 +1,6 @@
 #HLFRED
 
-You must have Ureka installed on your system. Get the installer from http://ssb.stsci.edu/ureka/
+In order to use HLFRED you must have AstroConda installed on your system. See https://astroconda.readthedocs.io/en/latest/ to install AstroConda.
 
 ##Installing superalign
 
@@ -14,16 +14,19 @@ In your browser go to https://github.com/dkmagee/superalign and click on the "Do
 	cd ~/Downloads/superalign-master
 	make
 
-####Copy superalign to a place in your `PATH`
+####Copy superalign and simplematch to a place in your `PATH`
 
-	cp superalign ~/bin
+	cp superalign ~/bin/superalign_hlfred
+	cp simplematch ~/bin/simplematch
+
+In order for HLFRED to find superalign you must name the executable `superalign_hlfred`.
 
 ##Installing hlfred
 
 
-####Create a Ureka variant
+####Activate AstroConda 
 	
-	ur_setup -n hlfred
+	source activate astroconda
 
 ####Install
 
@@ -31,17 +34,21 @@ In your browser go to https://github.com/dkmagee/superalign and click on the "Do
 
 ##Running
 
-HLFRED requires that you have the enviroment variables `HLFRED_DSDIR` and `HLFRED_RUNDIR` set for the input and output directories or you supply them on the command line. HLFRED will look for input data in `HLFRED_DSDIR/my_dataset_name` and will copy these data to `HLFRED_RUNDIR/my_dataset_name` and process the it in this directory.
+HLFRED requires that you have the enviroment variables `HLFRED_DSDIR` and `HLFRED_RUNDIR` set for the input and output directories or you supply them on the command line. HLFRED will look for input data in `HLFRED_DSDIR/my_dataset_name` and will copy these data to `HLFRED_RUNDIR/my_dataset_name` and process the data in run directory.
 
 Here's a simple shell script to run all tasks with the input data in a directory `HLFRED_DSDIR/test_hlf`:
 
 	#!/bin/bash
-
 	export HLFRED_DSDIR="/Volumes/DataRaid1/Data/DATASETS"
 	export HLFRED_RUNDIR="/Volumes/DataRaid1/Data/REDUCED"
 	DSN="test"
 
-	for task in init amsk drzi mcat saln apsh drzm
+	## For ACS/WFC data
+	# for task in init ampc amsk drzi mcat saln apsh drzm
+	## For WFC3/UVIS data
+	# for task in init amsk drzi mcat saln apsh drzm
+	# For WFC3/IR data
+	for task in init amsk ssub drzi mcat saln apsh mivm drzm
 	do
 		hlfred $DSN $task
 		ret=$?
