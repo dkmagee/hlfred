@@ -12,7 +12,7 @@ task = os.path.basename(__name__).split('.')[-1][4:]
 @click.option('--usehlet', is_flag=True, help='Use headerlets for updating WCS')
 @click.option('--ctype', default='imedian', help='Type of combine operation')
 @click.option('--itype', default='_flt.fits', help='Input file type')
-@click.option('--ofile', help='Output file (defaults to dsname_filter)')
+@click.option('--ofile', help='Output file (defaults to dsname_instdet_filter)')
 @click.option('--ptask', default='apsh', help='Previous task run')
 @pass_context
 def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
@@ -20,7 +20,6 @@ def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
     Drizzles final mosaic for each filter
     """
     dsn = ctx.dataset_name
-    useacs = ctx.useacs
     ctx.log('Running task %s for dataset %s', task, dsn)
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
@@ -35,7 +34,7 @@ def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
     
     for instdet, data in cfg['images'].iteritems():
         for fltr, images in data.iteritems():
-            outfile = '%s_%s' % (dsn, fltr.lower())
+            outfile = '%s_%s_%s' % (dsn, instdet, fltr.lower())
             infiles = [str('%s%s' % (i, itype)) for i in images]
             ctx.vlog('Drizzling mosaic %s', outfile)
             try:

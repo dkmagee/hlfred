@@ -1,5 +1,4 @@
 import numpy as np
-import pyfits
 from astropy.io import fits, ascii
 from stwcs.wcsutil import HSTWCS
 from hlfred.utils import sextractor
@@ -46,13 +45,13 @@ _sex_parms = [
         'FWHM_IMAGE'
 ]
 
-# SExtractor configuration parameters
-_sex_config = {
+# SExtractor configuration parameters ACSWFC & WFC3UVIS
+_sex_config_ACSWFC = {
         'CATALOG_NAME':'sa_temp.cat',
         'CATALOG_TYPE':'ASCII_HEAD',
-        'DETECT_THRESH':6.0,
+        'DETECT_THRESH':10.0,
         'DETECT_MINAREA':3,
-        'ANALYSIS_THRESH':6.0,
+        'ANALYSIS_THRESH':10.0,
         'FILTER': 'N',
         'DEBLEND_NTHRESH':16,
         'DEBLEND_MINCONT':0.05,
@@ -68,6 +67,30 @@ _sex_config = {
         'WEIGHT_TYPE':None,
         'VERBOSE_TYPE':'NORMAL'
 }
+
+# SExtractor configuration parameters WFC3IR
+_sex_config_WFC3IR = {
+        'CATALOG_NAME':'sa_temp.cat',
+        'CATALOG_TYPE':'ASCII_HEAD',
+        'DETECT_THRESH':10.0,
+        'DETECT_MINAREA':10,
+        'ANALYSIS_THRESH':10.0,
+        'FILTER': 'N',
+        'DEBLEND_NTHRESH':16,
+        'DEBLEND_MINCONT':0.002,
+        'CLEAN': 'YES',
+        'CLEAN_PARAM': 1.0,
+        'MASK_TYPE': 'CORRECT',
+        'SATUR_LEVEL': 128000.0,
+        'GAIN': 1.0,
+        'MAG_ZEROPOINT':0.0,
+        'MAG_GAMMA':4.0,
+        'PIXEL_SCALE':1,
+        'SEEING_FWHM':1.6,
+        'WEIGHT_TYPE':None,
+        'VERBOSE_TYPE':'NORMAL'
+}
+
 
 class Object:
     def __init__(self, x, y, ra, dec, r, mag, flux):
@@ -98,20 +121,19 @@ class MakeCat(object):
         # Set up SExtractor
         sex = sextractor.SExtractor()
         # Load the default configuration
-        for k,v in _sex_config.iteritems():
-            sex.config[k] = v
+        if instdet == 'acswfc' or instdet == 'wfc3uvis':
+            for k,v in _sex_config_ACSWFC.iteritems():
+                sex.config[k] = v
+        if instdet == 'wfc3ir':
+            for k,v in _sex_config_WFC3IR.iteritems():
+                sex.config[k] = v
         if sconfig:
             # Load any runtime configuration
             for k,v in sconfig.iteritems():
                 sex.config[k] = v
         if weightfile:
-            rmsfile = weightfile.replace('wht.fits', 'rms.fits')
-            if not os.path.exists(rmsfile):
-                fobj = fits.open(weightfile)
-                fobj[0].data = 1/np.sqrt(fobj[0].data).astype(np.float32)
-                fobj.writeto(rmsfile, clobber=True)
-            sex.config['WEIGHT_IMAGE'] = rmsfile
-            sex.config['WEIGHT_TYPE'] = 'MAP_RMS'
+            sex.config['WEIGHT_IMAGE'] = weightfile
+            sex.config['WEIGHT_TYPE'] = 'MAP_WEIGHT'
             sex.config['WEIGHT_GAIN'] = 'N'
         sex.config['CATALOG_NAME'] = outputfile
         # Load default parameters'
@@ -177,7 +199,7 @@ class MakeCat(object):
         print 'Found %s sources' % len(cleanobjectlist)
         wcs = HSTWCS(str(imgfile))
         for obj in cleanobjectlist:
-            sky = wcs.wcs_pix2sky(np.array([[obj.x, obj.y]]), 1)
+            sky = wcs.all_pix2world(np.array([[obj.x, obj.y]]), 1)
             o_radec.append([obj.ra[0], obj.dec[0]])
             obj.ra = sky[0][0]
             obj.dec = sky[0][1]
@@ -211,7 +233,7 @@ class MakeCat(object):
         cat = imgfile.replace('.fits', '.cat')
         outcat = imgfile.replace('.fits', '_sa.cat')
         data = ascii.read(cat, names=['id', 'ra', 'dec', 'x', 'y', 'mag'])
-        arcs = (wcs.wcs_sky2pix(zip(data['ra'], data['dec']), 1) - [wcs.naxis1/2, wcs.naxis2/2])*wcs.pscale
+        arcs = (wcs.all_world2pix(zip(data['ra'], data['dec']), 1) - [wcs.naxis1/2, wcs.naxis2/2])*wcs.pscale
         ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
         return
     
@@ -221,7 +243,7 @@ class MakeCat(object):
         Catalog should be of form: ID RA(deg) Dec(deg) Mag
         """
         data = ascii.read(refcat, names=['id', 'ra', 'dec', 'x', 'y', 'mag'])
-        arcs = (self.refwcs.wcs_sky2pix(zip(data['ra'], data['dec']), 1) - [self.refwcs.naxis1/2, self.refwcs.naxis2/2])*self.refwcs.pscale
+        arcs = (self.refwcs.all_world2pix(zip(data['ra'], data['dec']), 1) - [self.refwcs.naxis1/2, self.refwcs.naxis2/2])*self.refwcs.pscale
         ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
         return
 

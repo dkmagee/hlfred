@@ -10,11 +10,13 @@ class Context(object):
     def __init__(self):
         self.verbose = False
         self.dsdir = None
-        self.rundir = None 
+        self.rundir = None
+        self.pmaskdir = None 
         self.dataset_name = None
+        self.jref = None
+        self.iref = None
         self.refimg = None
         self.refcat = None
-        self.useacs = False
 
     def log(self, msg, *args):
         """Logs a message to stderr."""
@@ -49,7 +51,6 @@ class Context(object):
 pass_context = click.make_pass_decorator(Context, ensure=True)
 cmd_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), 'commands'))
 
-
 class HLFRED_CLI(click.MultiCommand):
 
     def list_commands(self, ctx):
@@ -70,17 +71,18 @@ class HLFRED_CLI(click.MultiCommand):
             return
         return mod.cli
 
-
 @click.command(cls=HLFRED_CLI, context_settings=CONTEXT_SETTINGS)
 @click.argument('dataset_name')
 @click.option('--dsdir',  type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='Input datasets directory (overrides HLFRED_DSDIR enviroment variable)')
 @click.option('--rundir', type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='Dataset run directory (overrides HLFRED_RUNDIR enviroment variable)')
+@click.option('--pmaskdir', type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='Persistiance mask directory (overrides HLFRED_PMASKDIR enviroment variable)')
+@click.option('--jref', type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='jref reference files directory (overrides jref enviroment variable)')
+@click.option('--iref', type=click.Path(exists=True, dir_okay=True, resolve_path=True), help='iref reference files directory (overrides iref enviroment variable)')
 @click.option('-r', '--refimg', default='', help='Reference image for alignment')
 @click.option('-c', '--refcat', default='', help='Reference catalog for alignment')
-@click.option('-a', '--useacs', is_flag=True, help='Use only ACS/WFC images for alignment')
 @click.option('-v', '--verbose', is_flag=True, help='Disables verbose mode')
 @pass_context
-def cli(ctx, dataset_name, dsdir, rundir, verbose, refimg, refcat, useacs):
+def cli(ctx, dataset_name, dsdir, rundir, pmaskdir, jref, iref, refimg, refcat, verbose):
     """The HLDFRED command line interface."""
     ctx.dataset_name = dataset_name
     dsdir_env = os.getenv('HLFRED_DSDIR')
@@ -103,6 +105,40 @@ def cli(ctx, dataset_name, dsdir, rundir, verbose, refimg, refcat, useacs):
     else:
         ctx.rundir = rundir_env
     ctx.log('HLFRED will use %s as the run directory', ctx.rundir)
+    
+    pmaskdir_env = os.getenv('HLFRED_PMASKDIR')
+    if not pmaskdir_env:
+        if not pmaskdir:
+            ctx.elog('No persistance mask directory set. Must be set in the HLFRED_PMASKDIR enviroment variable or as an option (--pmaskdir).')
+            sys.exit(1)
+        else:
+            ctx.pmaskdir = pmaskdir
+    else:
+        ctx.pmaskdir = pmaskdir_env
+    ctx.log('HLFRED will use %s as the persistance mask directory', ctx.pmaskdir)
+    
+    jref_env = os.getenv('jref')
+    if not jref_env:
+        if not jref:
+            ctx.elog('No $jref directory set. You must set the jref enviroment variable or as an option (--jref).')
+            sys.exit(1)
+        else:
+            ctx.jref = jref
+    else:
+        ctx.jref = jref_env
+    ctx.log('HLFRED will use %s as the $jref directory', ctx.jref)
+     
+    iref_env = os.getenv('iref')
+    if not iref_env:
+        if not iref:
+            ctx.elog('No $iref directory set. You must set the iref enviroment variable or as an option (--iref).')
+            sys.exit(1)
+        else:
+            ctx.iref = iref
+    else:
+        ctx.iref = iref_env
+    ctx.log('HLFRED will use %s as the $iref directory', ctx.iref)
+    
     if refimg:
         if not os.path.exists(refimg):
             ctx.elog('Reference image %s not found!' % refimg)
@@ -120,6 +156,4 @@ def cli(ctx, dataset_name, dsdir, rundir, verbose, refimg, refcat, useacs):
         ctx.vlog('Verbose is enabled')
     else:
         ctx.vlog('Verbose is disabled')
-    if ctx.useacs:
-        ctx.vlog('Using only ACSWFC images for alignment')
     

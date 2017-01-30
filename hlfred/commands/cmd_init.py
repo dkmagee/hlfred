@@ -28,6 +28,8 @@ def cli(ctx):
         sys.exit(1)
     procdir = cfg['procdir'] = os.path.join(ctx.rundir, dsn)
     infiles = cfg['infiles'] = glob.glob(os.path.join(dsdir, '*_flt.fits')) + glob.glob(os.path.join(dsdir, '*_flc.fits'))
+    cfg['refimg'] = None
+    cfg['refcat'] = None
     try: 
         ctx.vlog('Creating run directory %s', dsn)
         os.makedirs(procdir)
@@ -64,6 +66,8 @@ def cli(ctx):
     for f in outfiles:
         ctx.vlog('Preping fits file %s for pipeline run', f)
         id, ftr = init_image.initImage(f)
+        ctx.vlog('Creating footprint for fits file %s', f)
+        utils.getFootprint(f)
         if id not in images.keys():
             images[id] = {}
         fid = f.split('_flt.fits')[0]
@@ -77,3 +81,5 @@ def cli(ctx):
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
     utils.wConfig(cfg, cfgf)
+    ctx.vlog('Writing image lists')
+    utils.wImgLists(cfg)

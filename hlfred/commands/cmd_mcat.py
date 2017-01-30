@@ -16,7 +16,6 @@ def cli(ctx, itype, otype, ptask):
     Generates object catalogs for each input image sutable for alignment
     """
     dsn = ctx.dataset_name
-    useacs = ctx.useacs
     ctx.log('Running task %s for dataset %s', task, dsn)
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
@@ -31,7 +30,7 @@ def cli(ctx, itype, otype, ptask):
     tcfg['stime'] = ctx.dt()
     tcfg['completed'] = False
     
-    images = utils.imgList(cfg['images'], onlyacs=useacs)
+    images = utils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
     refwht = None
     extref = False
@@ -42,23 +41,25 @@ def cli(ctx, itype, otype, ptask):
     if not refimg:
         # For now if a reference image is not given just use one of the input images
         # TODO Need to determine best image to use for the reference image from the input list if no refimg is given
-        refimg = infiles.pop()
+        refimg = infiles[0]
         refwht = refimg.replace('drz_sci.fits', 'drz_wht.fits')
         cfg['refimg'] = refimg 
+        cfg['refcat'] = refimg.replace('.fits', '.cat')
     
     mkcat = make_catalog.MakeCat(refimg)
     if refcat:
         cfg['refcat'] = refcat
-        refcat_sa = '%s_refcat.cat' % dsn
+        refcat_sa = '%s_refcat_sa.cat' % dsn
         ctx.vlog('Generating catalog from external reference catalog %s', refcat)
         mkcat.makeSACatExtRef(refcat, refcat_sa)
         cfg['refcat_sa'] = refcat_sa
     else:
-        cfg['refcat_sa'] = refimg.replace('.fits', '.cat')
+        cfg['refcat_sa'] = refimg.replace('.fits', '_sa.cat')
         instdet = utils.getInstDet(refimg)
         if extref:
             ctx.vlog('Generating catalog for external reference image %s', refimg)
-            mkcat.makeSACat(refimg, instdet, weightfile=None, extref=True)
+            mkcat.makeCat(refimg, instdet, weightfile=refwht)
+            mkcat.makeSACat(refimg, extref=True)
         else:
             ctx.vlog('Generating catalog for internal reference image %s', refimg)
             mkcat.makeCat(refimg, instdet, weightfile=refwht)

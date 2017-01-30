@@ -1,26 +1,37 @@
 import os
 from astropy.io import fits
-import pyfits
-import pywcs
 import json
 from itertools import chain
 import numpy as np
 from stwcs.wcsutil import HSTWCS
+from scipy.spatial import ConvexHull
 
 sciexts = {'wfc3ir':[1], 'wfc3uvis':[1,4], 'acswfc':[1,4]}
+filters = {
+    'F150LP':'violet',
+    'F225W':'blueviolet',
+    'F275W':'indigo',
+    'F336W':'darkblue',
+    'F435W':'green',
+    'F606W':'yellow',
+    'F775W':'gold',
+    'F814W':'goldenrod',
+    'F850LP':'darkorange',
+    'F098M':'hotpink',
+    'F105W':'orangered',
+    'F125W':'salmon',
+    'F140W':'red',
+    'F160W':'darkred'
+}
 
-def imgList(imgsdict, onlyacs=False):
+
+def imgList(imgsdict):
     """Flattens the images dictionary to a list of images"""
     images = []
     for id in imgsdict.keys():
-        if onlyacs:
-            for fltr in imgsdict['acswfc'].keys():
-                for i in imgsdict['acswfc'][fltr]:
-                    images.append(i)
-        else:
-            for fltr in imgsdict[id].keys():
-                for i in imgsdict[id][fltr]:
-                    images.append(i)
+        for fltr in imgsdict[id].keys():
+            for i in imgsdict[id][fltr]:
+                images.append(i)
     return images
     
 def wConfig(cfgobj, cfgfile):
@@ -33,6 +44,16 @@ def rConfig(cfgfile):
     with open(cfgfile, 'r') as f:
         cfgobj = json.load(f)
     return cfgobj
+
+def wImgLists(cfgobj):
+    """Write out image lists"""
+    for inst, data in cfgobj['images'].iteritems():
+        for fltr, dat in data.iteritems():
+            lstn = '%s_%s_%s.lst' % (cfgobj['dsname'], inst, fltr)
+            print 'Writing %s' % lstn
+            with open(lstn, 'w') as f:
+                for i in dat:
+                    f.write('%s\n' % i)
 
 def getInstDet(fitsfile):
     """Get the instrument/detector of an HST image (e.g. acswfc)"""
@@ -52,9 +73,33 @@ def getFilter(fitsfile):
 
 def getPScale(fitsfile):
     """Get plate scale of image"""
-    wcs = HSTWCS(pyfits.open(fitsfile))
+    wcs = HSTWCS(fits.open(fitsfile))
     return wcs.pscale
 
+def getFootprint(fitsfile):
+    """Get footprint of image"""
+    instdet = getInstDet(fitsfile)
+    fin = fits.open(fitsfile)
+    exts = sciexts[instdet]
+    wcs = HSTWCS(fin, exts[0])
+    points = wcs.calc_footprint()
+    if len(exts) > 1:
+        wcs = HSTWCS(fin, exts[1])
+        points = np.vstack((points, wcs.calc_footprint()))
+    else:
+        points = wcs.calc_footprint()
+    hull = ConvexHull(points)
+    vertices = np.take(points, hull.vertices, axis=0).flatten().tolist()
+    fltr = getFilter(fitsfile).upper()
+    dsn = fitsfile[:9]
+    with open(fitsfile.replace('.fits', '_footprint.reg'), 'w') as reg:
+        reg.write('global color=green font="helvetica 8 normal" edit=1 move=1 delete=1 include=1 fixed=0\nfk5\n')
+        if fltr in filters.keys():
+            c = filters[fltr]
+        else:
+            c = 'white'
+        reg.write('polygon(%s) # color=%s text={%s}\n' % (str(vertices)[1:-1], c, dsn))
+            
 def iterstat(inputarr, sigrej=3.0, maxiter=10, mask=0, max='', min='', rejval=''):
     ### routine for iterative sigma-clipping
     ngood    = inputarr.size

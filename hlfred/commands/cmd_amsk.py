@@ -16,7 +16,7 @@ def cli(ctx, itype, otype, ptask):
     Applies mask to images
     """
     dsn = ctx.dataset_name
-    useacs = ctx.useacs
+    pmaskdir = ctx.pmaskdir
     ctx.log('Running task %s for dataset %s', task, dsn)
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
@@ -36,13 +36,17 @@ def cli(ctx, itype, otype, ptask):
     with click.progressbar(infiles, label='Generating masks for images') as pbar:
         for i, f in enumerate(pbar):
             ctx.vlog('\n\nChecking masks for image %s - %s of %s', f, i+1, n)
-            masks = glob.glob('%s*.reg' % f.replace('.fits', ''))
+            masks = [fp for fp in glob.glob('%s*.reg' % f[:9]) if 'footprint' not in fp]
             if masks:
                 try:
                     for m in masks:
                         if 'SCI' in m:
                             # ACSWFC and WFC3UV
-                            dq_ext = int(m.split('.reg')[0][-1])
+                            chip = int(m.split('.reg')[0][-1])
+                            if chip == 1:
+                                dq_ext = 3
+                            if chip == 2:
+                                dq_ext = 6
                         else:
                             # WFC3IR
                             dq_ext = 3
@@ -54,6 +58,15 @@ def cli(ctx, itype, otype, ptask):
                     raise
             else:
                 ctx.vlog('No masks found for %s', f)
+            
+            if utils.getInstDet(f) == 'wfc3ir':
+                if pmaskdir:
+                    ctx.vlog('Checking for persistance mask for image %s', f)
+                    pmaskfile = os.path.join(pmaskdir, f.replace('flt.fits', 'pmask.fits')) 
+                    if os.path.exists(pmaskfile):
+                        ctx.vlog('Found persistance mask image %s', os.path.basename(pmaskfile))
+                        apply_mask.applypersist(f, pmaskfile)
+                                 
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)

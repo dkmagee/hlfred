@@ -1,6 +1,6 @@
 import os, math
 from numpy import where, resize, less_equal, arange
-import pyfits
+from astropy.io import fits
 from hlfred.utils import utils
 
 # Code basically lifted from the ACS GTO Apsis pipeline module amputil.py
@@ -90,7 +90,7 @@ def getstep(ff, sky, sig, A1maxcol=-1, ext=0, nsig=3.5, verb=1):
 
 def ampcorr(flt):
     """Correct for ACS amplifier discontinuity"""
-    ff = pyfits.open(flt, mode='update')
+    ff = fits.open(flt, mode='update')
     for ext in [1,4]:
         sky,sig,med,msk = utils.iterstat(ff[ext].data)
         step, err, ns = getstep(ff, sky, sig, ext=ext)

@@ -1,9 +1,8 @@
-import shutil
 from drizzlepac import astrodrizzle as ad
-import pyfits
+import os
     
 def drzImage(flt, pscale, rot):
-    """drzImage: Drizzle out a image with an orientation of 0 (north up) and no cr-cleaning="""
+    """drzImage: Drizzle out a image with no cr-cleaning to be used for alignment"""
     ad.AstroDrizzle(
                     flt,
                     static=False,
@@ -20,5 +19,4 @@ def drzImage(flt, pscale, rot):
                     final_rot=rot,
                     resetbits=None
                     )
-    
     return

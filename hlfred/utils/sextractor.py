@@ -248,6 +248,10 @@ class SExtractor:
         {"comment": "Neural-Network_Weight table filename",
          "value": "py-sextractor.nnw"},
         
+        "BACK_TYPE":
+        {"comment": "AUTO or MANUAL>",
+         "value": "AUTO"},
+        
         "BACK_SIZE":
         {"comment": "Background mesh: <size> or <width>,<height>",
          "value": 64},

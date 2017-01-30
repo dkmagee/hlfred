@@ -1,49 +1,35 @@
-import Polygon as P
 import numpy as np
 import os, sys, glob
-import pyfits
-
-
-class RegionFile:
-    def __init__(self,filename):
-        self.filename = filename
-
-    def read(self):
-        fin = open(self.filename)
-        L = fin.readlines()  
-        # implement space filling polygon
-        cumPolygon = P.Polygon()
-        for l in L:
-            if 'polygon' in l:
-                coordlist = [int(round(float(i))) for i in l[l.find('(')+1:l.find(')')].split(',')]
-                # coordlist = [i-1 for i in coordlist]
-                print coordlist
-                nCoordlist = np.reshape(np.asarray(coordlist), (len(coordlist)/2, 2))
-                singlePolygon = P.Polygon(nCoordlist) 
-                newPolygon = singlePolygon + cumPolygon
-                cumPolygon = newPolygon
-        self.polyRegions = cumPolygon
-        return
-
-def updateDQArray(fitsimg, ext, poly_object):
-    fin = pyfits.open(fitsimg, 'update')
-    data = fin['dq', ext].data
-    for i in range(data.shape[1]):
-      for j in range(data.shape[0]):
-        if poly_object.isInside(i+1, j+1):
-            try:
-                data[j][i] |= 8192
-            except:
-                pass
-    fin.flush()
-    fin.close()
-    print 'Updated DQ array complete!'
-    return
+from astropy.io import fits
+import pyregion
+from hlfred.utils import utils
+from PIL import Image, ImageDraw
 
 def applymask(fitsimg, regionfile, dq_ext):
-    region = RegionFile(regionfile)
-    print 'Reading region file'
-    region.read()
-    print 'Applying %s to DQ ext %s' % (fitsimg, dq_ext)
-    updateDQArray(fitsimg, dq_ext, region.polyRegions)
+    """Apply a mask to an HST image DQ array given a DS9 region file with polygons regions identifying areas to mask"""
+    print 'Reading region file %s' % regionfile
+    with fits.open(fitsimg, 'update') as fin:
+        print 'Applying %s to DQ ext %s' % (fitsimg, dq_ext)
+        data = fin[dq_ext].data
+        instdet = utils.getInstDet(fitsimg)
+        if instdet == 'wfc3ir':
+            w,h = data.shape
+        else:
+            h,w = data.shape
+        img = Image.new('L', (w, h), 0)
+        regions = pyregion.open(regionfile).as_imagecoord(header=fin[dq_ext].header)
+        for reg in regions:
+            if reg.name == 'polygon':
+                ImageDraw.Draw(img).polygon(reg.coord_list, outline=1, fill=1)
+        data |= np.array(img)*8192
+    print 'Updating DQ array complete!'
+    
     return
+
+def applypersist(fitsimg, maskimg):
+    """Apply persistence mask to WFC3IR image DQ array given a persist mask image"""
+    print 'Updating DQ array in image %s using persistent mask image %s' % (fitsimg, maskimg)
+    with fits.open(fitsimg,'update') as fin:
+        data = fin[3].data
+        mask = fits.getdata(maskimg).astype(np.bool)
+        data[mask] = 512
