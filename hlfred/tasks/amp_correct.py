@@ -89,7 +89,7 @@ def getstep(ff, sky, sig, A1maxcol=-1, ext=0, nsig=3.5, verb=1):
     return (medstep,err,Ns)
 
 def ampcorr(flt):
-    """Correct for ACS amplifier discontinuity"""
+    """Correct for ACSWFC/WFC3UVIS amplifier discontinuity"""
     ff = fits.open(flt, mode='update')
     for ext in [1,4]:
         sky,sig,med,msk = utils.iterstat(ff[ext].data)

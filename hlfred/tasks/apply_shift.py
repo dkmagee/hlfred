@@ -53,4 +53,4 @@ def applyOffset(drzfile, fltfile, hlet=False):
     """Apply offset to an flt image from an aligned drizzled image"""
     tweakback.tweakback(drzfile, input=fltfile, origwcs='DRZWCS', verbose=True, force=True)
     if hlet:
-        headerlet.write_headerlet(fl, d, output=None, sciext='SCI', wcsname='DRZWCS_1', wcskey='PRIMARY', destim=None, sipname=None, npolfile=None, d2imfile=None, author=None, descrip=None, history=None, nmatch=None, catalog=None, attach=True, clobber=False, logging=False)
+        headerlet.write_headerlet(fltfile, 'HLFRED', output=None, sciext='SCI', wcsname='DRZWCS_2', wcskey='PRIMARY', destim=None, sipname=None, npolfile=None, d2imfile=None, author=None, descrip=None, history=None, nmatch=None, catalog=None, attach=True, clobber=False, logging=False)
