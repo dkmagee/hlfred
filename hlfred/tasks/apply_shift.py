@@ -2,14 +2,13 @@ from astropy.io import fits
 from stwcs.wcsutil import headerlet, HSTWCS
 from stwcs.wcsutil.altwcs import deleteWCS
 from drizzlepac import tweakback
-from hlfred.utils import utils
 import glob, sys
 
 def restoreWCSdrz(img, ext):
     wcs = HSTWCS(img, ext=ext, wcskey='A')
-    print 'Removing any previous alternative WCS for image %s[%s]' % (img, ext)
+    print('Removing any previous alternative WCS for image %s[%s]' % (img, ext))
     names = wcsnames(img, ext)
-    for k, n in names.iteritems():
+    for k, n in names.items():
         if k not in [' ', 'O']:
             deleteWCS(img, ext, wcskey=k, wcsname=n)
 
@@ -29,9 +28,9 @@ def restoreWCSdrz(img, ext):
     
 def restoreWCSflt(img, origimg,  ext):
     wcs = HSTWCS(origimg, ext=ext)
-    print 'Removing any previous alternative WCS for image %s[%s]' % (img, ext)
+    print('Removing any previous alternative WCS for image %s[%s]' % (img, ext))
     names = wcsnames(img, ext)
-    for k, n in names.iteritems():
+    for k, n in names.items():
         if k not in [' ', 'O']:
             deleteWCS(img, ext, wcskey=k, wcsname=n)
     

@@ -2,7 +2,7 @@ import numpy as np
 from stsci import ndimage as nd
 from stsci import imagestats
 from astropy.io import fits
-from hlfred.utils import sextractor
+from hlfred.hutils import sextractor
 import numpy.random as ran
 import os, glob, sys, shutil
 import subprocess
@@ -24,7 +24,7 @@ def fillInNoise(inputdata, mskdata):
     outputdata = inputdata.astype(np.float32) + mskn
     return outputdata
 
-def flatten(ffin, backsize=64):
+def flatten(ffin, backsize=128):
     # bad pixels using the DQ array
     bpm = np.where(fits.getdata(ffin, ext=3) == 0, 1, 0)
     bkgimg = ffin.replace('.fits', '_bkg.fits')
@@ -35,10 +35,11 @@ def flatten(ffin, backsize=64):
         medbkg = np.median(bkg[1].data)
         bkgdata2 = gaussian_filter(bkg[1].data - medbkg, 2)
         bkgdata10 = gaussian_filter(bkg[1].data - medbkg, 10)
-        clip2 = sigma_clip(bkgdata2, sigma=3)
-        clip10 = sigma_clip(bkgdata10, sigma=3)
-        bkg[1].data = np.where(clip2.mask.astype(np.int) == 0, 1, 0) * np.where(clip10.mask.astype(np.int) == 0, 1, 0) * bpm 
-        bkg.writeto(mskimg, clobber=True)
+        clip2 = sigma_clip(bkgdata2, sigma=5)
+        clip10 = sigma_clip(bkgdata10, sigma=5)
+        bkg[1].data = np.where(clip2.mask.astype(np.int) == 0, 1, 0) * np.where(clip10.mask.astype(np.int) == 0, 1, 0) * bpm
+        # bkg[1].data = np.where(clip2.mask.astype(np.int) == 0, 1, 0) * bpm 
+        bkg.writeto(mskimg, overwrite=True)
 
     # mask out objects and bad pixels and fill with noise
     msk = fits.getdata(mskimg)
@@ -66,11 +67,11 @@ def flatten(ffin, backsize=64):
     with fits.open(ffin) as f:
         flattened = f[1].data - sky
         medbkg = np.median(sky)
-        print 'final sky value: ', medbkg
-        f[1].header.update('BKG', medbkg)
+        print('final sky value: ', medbkg)
+        f[1].header['BKG'] = (medbkg, 'HLFRED Background')
         f[1].data = flattened + medbkg
-        print 'writing flattened image', out
-        f.writeto(out, clobber=True)
+        print('writing flattened image', out)
+        f.writeto(out, overwrite=True)
         f.close()
     # move background image data in to bkg directory
     if not os.path.exists('bkg'):

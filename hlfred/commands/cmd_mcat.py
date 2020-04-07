@@ -1,6 +1,6 @@
 import click
 from hlfred.cli import pass_context
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from hlfred.tasks import make_catalog
 import sys, os, shutil, glob
 
@@ -20,7 +20,7 @@ def cli(ctx, itype, otype, ptask):
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
     cfgf = '%s_cfg.json' % dsn
-    cfg = utils.rConfig(cfgf)
+    cfg = hutils.rConfig(cfgf)
     refimg = ctx.refimg
     refcat = ctx.refcat
     tcfg = cfg['tasks'][task] = {}
@@ -30,7 +30,7 @@ def cli(ctx, itype, otype, ptask):
     tcfg['stime'] = ctx.dt()
     tcfg['completed'] = False
     
-    images = utils.imgList(cfg['images'])
+    images = hutils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
     refwht = None
     extref = False
@@ -50,12 +50,14 @@ def cli(ctx, itype, otype, ptask):
     if refcat:
         cfg['refcat'] = refcat
         refcat_sa = '%s_refcat_sa.cat' % dsn
+        cfg['refcat_sa'] = refcat_sa
         ctx.vlog('Generating catalog from external reference catalog %s', refcat)
         mkcat.makeSACatExtRef(refcat, refcat_sa)
-        cfg['refcat_sa'] = refcat_sa
+        
     else:
+        cfg['refcat'] = refimg.replace('.fits', '.cat')
         cfg['refcat_sa'] = refimg.replace('.fits', '_sa.cat')
-        instdet = utils.getInstDet(refimg)
+        instdet = hutils.getInstDet(refimg)
         if extref:
             ctx.vlog('Generating catalog for external reference image %s', refimg)
             mkcat.makeCat(refimg, instdet, weightfile=refwht)
@@ -70,11 +72,16 @@ def cli(ctx, itype, otype, ptask):
         for i, inf in enumerate(pbar):
             ctx.vlog('\nGenerating catalogs for image %s - %s of %s', inf, i+1, n)
             whtf = inf.replace('sci', 'wht')
-            instdet = utils.getInstDet(inf)
+            instdet = hutils.getInstDet(inf)
             mkcat.makeCat(inf, instdet, weightfile=whtf)
+            micat = inf.replace('.fits', '_all.cat')
+            omicat = inf.replace('.fits', '.cat')
+            omrcat = inf.replace('.fits', '_ref.cat')
+            # create new catalogs with only maching pairs
+            hutils.nn_match_radec(micat, refcat, omicat, omrcat)
             mkcat.makeSACat(inf)
 
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
-    utils.wConfig(cfg, cfgf)
+    hutils.wConfig(cfg, cfgf)

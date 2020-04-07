@@ -1,7 +1,7 @@
 import numpy as np
 from astropy.io import fits, ascii
 from stwcs.wcsutil import HSTWCS
-from hlfred.utils import sextractor
+from hlfred.hutils import sextractor
 import os
 
 _sa_config = {
@@ -122,14 +122,14 @@ class MakeCat(object):
         sex = sextractor.SExtractor()
         # Load the default configuration
         if instdet == 'acswfc' or instdet == 'wfc3uvis':
-            for k,v in _sex_config_ACSWFC.iteritems():
+            for k,v in _sex_config_ACSWFC.items():
                 sex.config[k] = v
         if instdet == 'wfc3ir':
-            for k,v in _sex_config_WFC3IR.iteritems():
+            for k,v in _sex_config_WFC3IR.items():
                 sex.config[k] = v
         if sconfig:
             # Load any runtime configuration
-            for k,v in sconfig.iteritems():
+            for k,v in sconfig.items():
                 sex.config[k] = v
         if weightfile:
             sex.config['WEIGHT_IMAGE'] = weightfile
@@ -182,21 +182,21 @@ class MakeCat(object):
             if not objecti.nextToBig:
                 objectlist_keep.append(objecti)
             else:
-                print 'Excluding object at %i %i' % (objecti.x, objecti.y)
+                print('Excluding object at %i %i' % (objecti.x, objecti.y))
         return objectlist_keep
     
     
     def makeCat(self, imgfile, instdet, weightfile=None, extref=False):
         """Makes a catalog of objects to be used for input to superalign and creates a DS9 region file of objects"""
         
-        imgfile_cat = '%s.cat' % imgfile.replace('.fits', '')
-        imgfile_reg = '%s.reg' % imgfile.replace('.fits', '')
+        imgfile_cat = '%s_all.cat' % imgfile.replace('.fits', '')
+        imgfile_reg = '%s_all.reg' % imgfile.replace('.fits', '')
     
         o_radec = []
         ext = 0
         objectlist = self.findSources('%s[%s]' % (imgfile, ext), imgfile_cat, instdet, weightfile, extref=extref)
         cleanobjectlist = self.removeCloseSources(objectlist)
-        print 'Found %s sources' % len(cleanobjectlist)
+        print('Found %s sources' % len(cleanobjectlist))
         wcs = HSTWCS(str(imgfile))
         for obj in cleanobjectlist:
             sky = wcs.all_pix2world(np.array([[obj.x, obj.y]]), 1)
@@ -233,8 +233,8 @@ class MakeCat(object):
         cat = imgfile.replace('.fits', '.cat')
         outcat = imgfile.replace('.fits', '_sa.cat')
         data = ascii.read(cat, names=['id', 'ra', 'dec', 'x', 'y', 'mag'])
-        arcs = (wcs.all_world2pix(zip(data['ra'], data['dec']), 1) - [wcs.naxis1/2, wcs.naxis2/2])*wcs.pscale
-        ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
+        arcs = (wcs.all_world2pix(list(zip(data['ra'], data['dec'])), 1) - [wcs.naxis1/2, wcs.naxis2/2])*wcs.pscale
+        ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header', overwrite=True)
         return
     
     def makeSACatExtRef(self, refcat, outcat):
@@ -243,7 +243,7 @@ class MakeCat(object):
         Catalog should be of form: ID RA(deg) Dec(deg) Mag
         """
         data = ascii.read(refcat, names=['id', 'ra', 'dec', 'x', 'y', 'mag'])
-        arcs = (self.refwcs.all_world2pix(zip(data['ra'], data['dec']), 1) - [self.refwcs.naxis1/2, self.refwcs.naxis2/2])*self.refwcs.pscale
-        ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header')
+        arcs = (self.refwcs.all_world2pix(list(zip(data['ra'], data['dec'])), 1) - [self.refwcs.naxis1/2, self.refwcs.naxis2/2])*self.refwcs.pscale
+        ascii.write([data['id'], arcs[:,0], arcs[:,1], data['mag']], outcat, format='no_header', overwrite=True)
         return
 

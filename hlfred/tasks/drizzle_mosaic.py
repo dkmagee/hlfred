@@ -13,7 +13,7 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
             
     if optcr:
         # first make median image
-        print 'Creating median image...'
+        print('Creating median image...')
         ad.AstroDrizzle(infiles,
                         static=False,
                         skysub=False,
@@ -23,12 +23,11 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
                         blot=False,
                         driz_cr=False,
                         driz_combine=False,
-                        num_cores=4,
                         preserve=False,
                         context=False)
         shutil.move('final_med.fits', 'median.fits')
         # next make a minmed image
-        print 'Creating minmed image...'
+        print('Creating minmed image...')
         ad.AstroDrizzle(infiles,
                         static=False,
                         skysub=False,
@@ -38,12 +37,11 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
                         blot=False,
                         driz_cr=False,
                         driz_combine=False,
-                        num_cores=4,
                         preserve=False,
                         context=False)
         shutil.move('final_med.fits', 'minmed.fits')
         # make a context image
-        print 'Creating combined median/minmed image...'
+        print('Creating combined median/minmed image...')
         ctx = fits.getdata('minmed.fits')*0
         for i in infiles:
             ssci = i.replace('_flt.fits', '_single_sci.fits')
@@ -56,7 +54,7 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
         fmed = mm*mm_mask + med*np.where(mm_mask==1, 0, 1)
         fits.writeto('final_med.fits', fmed.astype(np.float32))
         # now run blot and driz_cr
-        print 'Running blot & driz_cr using combined median image...'
+        print('Running blot & driz_cr using combined median image...')
         ad.AstroDrizzle(infiles,
                         static=False,
                         skysub=False,
@@ -65,7 +63,6 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
                         blot=True,
                         driz_cr=True,
                         driz_combine=False,
-                        num_cores=4,
                         preserve=False,
                         context=False)
         # # do the final drizzle combine
@@ -77,11 +74,11 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
                         median=False,
                         blot=False,
                         driz_cr=False,
-                        resetbits=None,
                         driz_combine=True,
                         final_refimage=refimg,
                         final_pixfrac=pixfrac,
-                        num_cores=4,
+                        final_fillval=0,
+                        final_wht_type='IVM',
                         preserve=False,
                         context=False)
 
@@ -90,7 +87,7 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
                         infiles,
                         output=outfile,
                         static=False,
-                        skysub=False,
+                        skysub=True,
                         driz_separate=False,
                         median=False,
                         blot=False,
@@ -99,21 +96,22 @@ def drzMosaic(infiles, outfile, refimg=None, optcr=False, drzonly=False, usehlet
                         final_wcs=True,
                         final_refimage=refimg,
                         final_pixfrac=0.75,
-                        resetbits=None,
-                        num_cores=4,
+                        final_fillval=0,
+                        final_wht_type='IVM',
                         preserve=False,
-                        context=True
+                        context=False
                         )
     else:
         ad.AstroDrizzle(
             infiles,
             output=outfile,
-            num_cores=4,
             preserve=False,
             context=False,
             combine_type=ctype,
             driz_combine=True,
             final_wcs=True,
             final_refimage=refimg,
-            final_pixfrac=pixfrac
+            final_pixfrac=0.75,
+            final_wht_type='IVM',
+            final_fillval=0
         )

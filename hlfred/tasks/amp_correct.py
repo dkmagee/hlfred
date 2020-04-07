@@ -1,7 +1,7 @@
 import os, math
 from numpy import where, resize, less_equal, arange
 from astropy.io import fits
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 
 # Code basically lifted from the ACS GTO Apsis pipeline module amputil.py
 
@@ -15,11 +15,11 @@ def getsideMed(colist,sky,thresh):
 
     nn = len(newList)
     if nn < 1:
-        print "Bug in amputil: amputil.getsideMed found zero-length list!"
-        raise Exception,"amputil: getsideMed found zero-length list!"
+        print("Bug in amputil: amputil.getsideMed found zero-length list!")
+        raise Exception("amputil: getsideMed found zero-length list!")
     
     newList.sort()
-    med = (newList[nn/2] + newList[(nn-1)/2])/2.0
+    med = (newList[int(nn/2)] + newList[int((nn-1)/2)])/2.0
     return med
 
 def okcheck(x,mean,thresh):
@@ -37,28 +37,28 @@ def getstep(ff, sky, sig, A1maxcol=-1, ext=0, nsig=3.5, verb=1):
     retnull = (0,-1,0)
     dat = ff[ext].data
     if len(dat.shape) != 2:
-        print "amp.getstep: data array not 2-d!"
+        print("amp.getstep: data array not 2-d!")
         return retnull
 
     if A1maxcol <= 0:
         A1maxcol = dat.shape[1]/2 - 1
         if verb:
-            print "Taking amp boundary at %d/%d." %(A1maxcol,A1maxcol+1)
+            print("Taking amp boundary at %d/%d." %(A1maxcol,A1maxcol+1))
 
     ny = dat.shape[0]
     thresh = nsig*sig
 
     steplist=[]
     for j in range(ny):
-        a1q = dat[j,A1maxcol-5]   # 2042
-        a1p = dat[j,A1maxcol-4]   # 2043
-        a1o = dat[j,A1maxcol-3]   # 2044
-        a1m = dat[j,A1maxcol-1]   # 2046
-        a2m = dat[j,A1maxcol+2]   # 2049
-        a2n = dat[j,A1maxcol+3]   # 2050
-        a2o = dat[j,A1maxcol+4]   # 2051
-        a2p = dat[j,A1maxcol+5]   # 2052
-        a2q = dat[j,A1maxcol+6]   # 2053
+        a1q = dat[j,int(A1maxcol-5)]   # 2042
+        a1p = dat[j,int(A1maxcol-4)]   # 2043
+        a1o = dat[j,int(A1maxcol-3)]   # 2044
+        a1m = dat[j,int(A1maxcol-1)]   # 2046
+        a2m = dat[j,int(A1maxcol+2)]   # 2049
+        a2n = dat[j,int(A1maxcol+3)]   # 2050
+        a2o = dat[j,int(A1maxcol+4)]   # 2051
+        a2p = dat[j,int(A1maxcol+5)]   # 2052
+        a2q = dat[j,int(A1maxcol+6)]   # 2053
 
         okLeft  = okcheck(a1m,sky,thresh) + okcheck(a1o,sky,thresh) + okcheck(a1p,sky,thresh)
         okRight = okcheck(a2m,sky,thresh) + okcheck(a2n,sky,thresh) + okcheck(a2o,sky,thresh) + okcheck(a2p,sky,thresh)
@@ -73,13 +73,13 @@ def getstep(ff, sky, sig, A1maxcol=-1, ext=0, nsig=3.5, verb=1):
         del step,rightamp,leftamp,a1m,a1o,a1p,a1q,a2m,a2n,a2o,a2p,a2q
 
     Ns = len(steplist)
-    if verb:  print "Ns = "+str(Ns)+" used in median step estimate."
+    if verb:  print("Ns = "+str(Ns)+" used in median step estimate.")
 
     if Ns < min(500,ny/4):
         return retnull
 
     steplist.sort()
-    medstep = (steplist[(Ns-1)/2] + steplist[Ns/2])/2.0
+    medstep = (steplist[int((Ns-1)/2)] + steplist[int(Ns/2)])/2.0
 
     err=0.0
     for i in range(Ns):
@@ -92,7 +92,7 @@ def ampcorr(flt):
     """Correct for ACSWFC/WFC3UVIS amplifier discontinuity"""
     ff = fits.open(flt, mode='update')
     for ext in [1,4]:
-        sky,sig,med,msk = utils.iterstat(ff[ext].data)
+        sky,sig,med,msk = hutils.iterstat(ff[ext].data)
         step, err, ns = getstep(ff, sky, sig, ext=ext)
         ny, nx = ff[ext].data.shape
         colvals = resize(arange(nx),(ny,nx))

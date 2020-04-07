@@ -4,7 +4,7 @@ import json
 from itertools import chain
 import numpy as np
 from stwcs.wcsutil import HSTWCS
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, cKDTree
 
 sciexts = {'wfc3ir':[1], 'wfc3uvis':[1,4], 'acswfc':[1,4]}
 filters = {
@@ -28,8 +28,8 @@ filters = {
 def imgList(imgsdict):
     """Flattens the images dictionary to a list of images"""
     images = []
-    for id in imgsdict.keys():
-        for fltr in imgsdict[id].keys():
+    for id in list(imgsdict.keys()):
+        for fltr in list(imgsdict[id].keys()):
             for i in imgsdict[id][fltr]:
                 images.append(i)
     return images
@@ -47,10 +47,10 @@ def rConfig(cfgfile):
 
 def wImgLists(cfgobj):
     """Write out image lists"""
-    for inst, data in cfgobj['images'].iteritems():
-        for fltr, dat in data.iteritems():
+    for inst, data in cfgobj['images'].items():
+        for fltr, dat in data.items():
             lstn = '%s_%s_%s.lst' % (cfgobj['dsname'], inst, fltr)
-            print 'Writing %s' % lstn
+            print('Writing %s' % lstn)
             with open(lstn, 'w') as f:
                 for i in dat:
                     f.write('%s\n' % i)
@@ -94,7 +94,7 @@ def getFootprint(fitsfile):
     dsn = fitsfile[:9]
     with open(fitsfile.replace('.fits', '_footprint.reg'), 'w') as reg:
         reg.write('global color=green font="helvetica 8 normal" edit=1 move=1 delete=1 include=1 fixed=0\nfk5\n')
-        if fltr in filters.keys():
+        if fltr in list(filters.keys()):
             c = filters[fltr]
         else:
             c = 'white'
@@ -105,10 +105,10 @@ def iterstat(inputarr, sigrej=3.0, maxiter=10, mask=0, max='', min='', rejval=''
     ngood    = inputarr.size
     arrshape = inputarr.shape
     if ngood == 0: 
-        print 'no data points given'
+        print('no data points given')
         return 0, 0, 0, 0
     if ngood == 1:
-        print 'only one data point; cannot compute stats'
+        print('only one data point; cannot compute stats')
         return 0, 0, 0, 0
 
     #determine max and min
@@ -155,3 +155,58 @@ def iterstat(inputarr, sigrej=3.0, maxiter=10, mask=0, max='', min='', rejval=''
     else:
         fmedian = fmean
     return fmean, fsig, fmedian, savemask
+
+def nn_match_radec(imgcat, refcat, oimgcat, orefcat):
+    """Use Nearest Neighbors to match objects"""
+    rcat = np.genfromtxt(refcat, usecols=(1,2))
+    icat = np.genfromtxt(imgcat, usecols=(1,2))
+    robj = open(refcat).readlines()
+    iobj = open(imgcat).readlines()
+    rout = open(orefcat, 'w')
+    iout = open(oimgcat, 'w')
+    kdr = cKDTree(rcat)
+    kdi= cKDTree(icat)
+    fnobjs = 0
+    lnobjs = 0
+    ldobjs = []
+    nl = []
+    rd = 0.0003
+    near = kdr.query_ball_tree(kdi, rd)
+    fnobjs = len([n for n in near if n != []])
+    dobjs = fnobjs-lnobjs
+    print('Radius: %s, Diff %s' % (1, dobjs))
+    ldobjs.append(dobjs)
+    nl.append(near)
+    lnobjs = fnobjs
+    bestr = np.array(ldobjs).argmax()
+    matches = []
+    # nearest = nl[bestr+5]
+    nearest = nl[bestr]
+    dxl = []
+    dyl = []
+    for i,j in enumerate(nearest):
+        if j != []:
+            ri, rx, ry, rr, rd, rm = [float(s) for s in robj[i].split()]
+            ii, ix, iy, iir, iid, im, = [float(s) for s in iobj[j[0]].split()]
+            matches.append([robj[i], iobj[j[0]]])
+    nmatch = len(matches)
+    print('%s: Found %s pairs' % (imgcat, nmatch))
+    if nmatch < 5:
+        print('Not enough pairs found!')
+        print('Creating new reference catalog centered around image.')
+        iimg = imgcat.replace('_all.cat', '.fits')
+        cra = fits.getval(iimg, 'crval1')
+        cdec = fits.getval(iimg, 'crval2')
+        for i, rd in enumerate(rcat):
+            # check if in 0.1 degree radius
+            if (rd[0] - cra)**2 + (rd[1] - cdec)**2 < 0.0001:
+                rout.write(robj[i])
+        iout.writelines(iobj)
+    else:
+        for n in matches:
+            rout.write(n[0])
+            iout.write(n[1])
+    rout.close()
+    iout.close()
+    return
+

@@ -1,6 +1,6 @@
 import click
 from hlfred.cli import pass_context
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from hlfred.tasks import drizzle_mosaic
 import sys, os, shutil, glob
 
@@ -24,7 +24,7 @@ def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
     cfgf = '%s_cfg.json' % dsn
-    cfg = utils.rConfig(cfgf)
+    cfg = hutils.rConfig(cfgf)
     tcfg = cfg['tasks'][task] = {}
     tcfg['ptask'] = ptask
     tcfg['itype'] = itype
@@ -32,8 +32,8 @@ def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
     tcfg['stime'] = ctx.dt()
     tcfg['completed'] = False
     
-    for instdet, data in cfg['images'].iteritems():
-        for fltr, images in data.iteritems():
+    for instdet, data in cfg['images'].items():
+        for fltr, images in data.items():
             outfile = '%s_%s_%s' % (dsn, instdet, fltr.lower())
             infiles = [str('%s%s' % (i, itype)) for i in images]
             ctx.vlog('Drizzling mosaic %s', outfile)
@@ -43,11 +43,11 @@ def cli(ctx, optcr, drzonly, usehlet, ctype, itype, ofile, ptask):
                     drizzle_mosaic.drzMosaic(infiles, outfile, refimg=refimg, optcr=optcr, drzonly=drzonly, usehlet=usehlet, ctype=ctype)
                 else:
                     drizzle_mosaic.drzMosaic(infiles, outfile, optcr=optcr, drzonly=drzonly, usehlet=usehlet, ctype=ctype)
-            except Exception, e:
-                utils.wConfig(cfg, cfgf)
-                print e
+            except Exception as e:
+                hutils.wConfig(cfg, cfgf)
+                print(e)
                 raise
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
-    utils.wConfig(cfg, cfgf)
+    hutils.wConfig(cfg, cfgf)

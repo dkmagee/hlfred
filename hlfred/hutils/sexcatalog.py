@@ -87,10 +87,9 @@ Examples:
 
 # ======================================================================
 
-import __builtin__
+import builtins
 
 import sys
-import exceptions
 
 # ======================================================================
 
@@ -638,31 +637,27 @@ class SExtractorfile:
         self._firstline = True
         
         if self.mode != 'r':
-            raise ValueError, \
-                  'only read-only access is now implemented.'
+            raise ValueError('only read-only access is now implemented.')
         
-        self._file = __builtin__.open(self.name, self.mode)
+        self._file = builtins.open(self.name, self.mode)
         self.closed = False
         
         # Reading header
 
         self._line = self._file.readline()
         if not(self._line):
-            raise WrongSExtractorfileException, \
-                  'not a SExtractor text catalog (empty file)'
+            raise WrongSExtractorfileException('not a SExtractor text catalog (empty file)')
 
         while (self._line):
             __ll = (self._line).replace('\n', '')
             if __ll[0] == '#':   # Still in header
                 columns = __ll.split()
                 if len(columns) < 3:
-                    raise WrongSExtractorfileException, \
-                          'not a SExtractor text catalog (invalid header)'
+                    raise WrongSExtractorfileException('not a SExtractor text catalog (invalid header)')
                 name=columns[2]
-                if not(name in SExtractorfile._SE_keys.keys()):
-                    raise WrongSExtractorfileException, \
-                          'not a SExtractor text catalog (unknown keyword %s)'\
-                          % name
+                if not(name in list(SExtractorfile._SE_keys.keys())):
+                    raise WrongSExtractorfileException('not a SExtractor text catalog (unknown keyword %s)'\
+                          % name)
                 self._keys_positions[name]=int(columns[1])-1
                 self._keys.append(name)
             else:
@@ -671,8 +666,7 @@ class SExtractorfile:
 
 
         if not(self._keys):
-            raise WrongSExtractorfileException, \
-                  'not a SExtractor text catalog (empty header)'
+            raise WrongSExtractorfileException('not a SExtractor text catalog (empty header)')
             
         self._outdict = dict([(k, None) for k in self._keys])
         self._firstline = True
@@ -686,14 +680,14 @@ class SExtractorfile:
         return self
 
 
-    def next(self):
+    def __next__(self):
         rr = self.readline()
         if not(rr):
             raise StopIteration
         return rr
 
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self._file
 
 
@@ -704,7 +698,7 @@ class SExtractorfile:
 
     def getcolumns(self):
         "Return the list of available parameters."
-        return self.keys()
+        return list(self.keys())
 
 
     def readline(self):
@@ -730,7 +724,7 @@ class SExtractorfile:
 
 # if multiple apertures are specified, these are returned as lists else they're like before
 
-        self.ez_vals = self._keys_positions.values()
+        self.ez_vals = list(self._keys_positions.values())
         self.ez_vals.sort()
         self.__newvals = []
         maxval = max(self.ez_vals)
@@ -756,7 +750,7 @@ class SExtractorfile:
                     self.__newvals.append(temp)
                 
             
-        self._outdict.update(dict(zip(self._keys, self.__newvals)))
+        self._outdict.update(dict(list(zip(self._keys, self.__newvals))))
         
         # this changes the values in the dictionary to their correct types
         for i in self._keys:

@@ -6,7 +6,7 @@ from astropy.io import fits
 import subprocess
 import os, sys
 import math
-from hlfred.utils import mcmcShifts
+from hlfred.hutils import mcmcShifts
 
 def nn_match(imgcat, refcat, refwcs, oimgcat, orefcat, iter=1):
     """Use Nearest Neighbors to match objects"""
@@ -28,7 +28,7 @@ def nn_match(imgcat, refcat, refwcs, oimgcat, orefcat, iter=1):
         near = kdr.query_ball_tree(kdi, rd)
         fnobjs = len([n for n in near if n != []])
         dobjs = fnobjs-lnobjs
-        print 'Radius: %s, Diff %s' % (r, dobjs)
+        print('Radius: %s, Diff %s' % (r, dobjs))
         ldobjs.append(dobjs)
         nl.append(near)
         lnobjs = fnobjs
@@ -45,7 +45,7 @@ def nn_match(imgcat, refcat, refwcs, oimgcat, orefcat, iter=1):
             xyout.write('%s %s %s %s\n' % (rx, refwcs.naxis2-ry, rx-ix, ry-iy))
             matches.append([robj[i], iobj[j[0]]])
     xyout.close()
-    print '%s: Found %s pairs' % (imgcat, len(matches))
+    print('%s: Found %s pairs' % (imgcat, len(matches)))
     for n in matches:
         rout.write(n[0])
         iout.write(n[1])
@@ -55,7 +55,7 @@ def nn_match(imgcat, refcat, refwcs, oimgcat, orefcat, iter=1):
 
 def makeSAin(visit, imgs, refwcs, refcat_sa):
     sa_file = '%s_superalign.in' % visit
-    print 'Creating %s' % sa_file
+    print('Creating %s' % sa_file)
     sa_in = open(sa_file, 'w')
     sa_in.write('%s 1\n' % str(len(imgs)+1))
     sa_in.write('%s 0.000 0.000 0.000\n' % refcat_sa)
@@ -70,13 +70,13 @@ def makeSAin(visit, imgs, refwcs, refcat_sa):
 
 def runSuperAlign(cmd):
     """Run SuperAlign on stack of images"""
-    print 'Running: %s' % cmd
+    print('Running: %s' % cmd)
     call = subprocess.call(cmd, shell=True)
-    return
+    return call
     
 def runSimpleMatch(visit):
     """Run SimpleMatch on stack of images"""
-    print 'Reading %s_superalign.in' % visit
+    print('Reading %s_superalign.in' % visit)
     sa_in = {}
     no_star = []
     sm_out = open('%s_simplematch.out' % visit, 'w')
@@ -85,7 +85,7 @@ def runSimpleMatch(visit):
         cs = s[0].replace('.cat', '.cat.stars')
         cf = s[0].replace('.cat', '.cat.fit')
         cmd = 'simplematch %s_sources.cat %s %s %s %s %s' % (visit, cs, s[1], s[2], s[3], cf)
-        print 'Running: %s' % cmd
+        print('Running: %s' % cmd)
         call = subprocess.call(cmd, shell=True)
         # Get the fitted shifts an put them in simplematch.out
         fit = open(cf, 'r').readlines()
@@ -109,41 +109,44 @@ def runSimpleMatch(visit):
         if abs(angle_x - angle_y + 360) < 1:
             angle_x += 360
 
-        print 'Shift: dx = %s dy = %s theta = %s' % (aa, dd, (angle_x + angle_y)/2)
+        print('Shift: dx = %s dy = %s theta = %s' % (aa, dd, (angle_x + angle_y)/2))
 
         dx = float(s[1]) - aa
         dy = float(s[2]) - dd
         dt = float(s[3]) - (angle_x + angle_y)/2
 
-        print 'Final shift: dx = %s dy = %s dt = %s' % (dx, dy, dt)
+        print('Final shift: dx = %s dy = %s dt = %s' % (dx, dy, dt))
         sm_out.write('%s %s %s %s\n' % (s[0], dx, dy, dt))
     sm_out.close()
     if no_star:
-        print 'No star file found for:'
+        print('No star file found for:')
         for i in no_star:
-            print i
+            print(i)
     return
 
 
 def applyShiftsSA(visit):
     sa_out = '%s_simplematch.out' % visit
     drzs = {}
-    print 'Reading %s...' % sa_out
+    print('Reading %s...' % sa_out)
     for i in [j.split() for j in open(sa_out).readlines()]:
         drz = i[0].replace('_sa.cat', '.fits')
         drzs[drz] = [float(i[1]), float(i[2]), float(i[3])]
-    print "Applying shifts..."
-    for d, s in drzs.iteritems():
-        if os.path.exists(d):
-            if d[:6] == visit:
-                if s:
-                    dx, dy, dt = s
-                    wcs = HSTWCS(fits.open(d))
-                    dxp = round(dx/wcs.pscale, 3)
-                    dyp = round(dy/wcs.pscale, 3)
-                    dtp = round(dt, 3)
-                    print d, dxp, dyp, dtp
-                    updatehdr.updatewcs_with_shift(d, d, wcsname='DRZWCS', xsh=dxp, ysh=dyp, rot=dtp, scale=1.0, force=True)
+    print("Applying shifts...")
+    with open('sa_shifts.txt', 'a') as sas:
+        for d, s in drzs.items():
+            if os.path.exists(d):
+                if d[:6] == visit:
+                    if s:
+                        dx, dy, dt = s
+                        wcs = HSTWCS(fits.open(d))
+                        dxp = round(dx/wcs.pscale, 3)
+                        dyp = round(dy/wcs.pscale, 3)
+                        dtp = round(dt, 3)
+                        offsets = [d, dxp, dyp, dtp]
+                        sas.write('%s %.3f %.3f %.3f\n' % (d, dxp, dyp, dtp))
+                        print(d, dxp, dyp, dtp)
+                        updatehdr.updatewcs_with_shift(d, d, wcsname='DRZWCS', xsh=dxp, ysh=dyp, rot=dtp, scale=1.0, force=True)
 
 def makeSourceCat(visit, refwcs):
     scat = '%s_sources.cat' % visit
@@ -195,8 +198,8 @@ def refineShiftMCMC(drzfile):
 
         ox, oy = wcs.wcs.crpix.tolist()
 
-        offset, err = mcmcShifts.findOffsetMCMC(imgcatw, refcatw, maxShift=(5, 5, 0.3), rotOrigin=(ox, oy), precision=0.01, visualize=False)
-        print drzfile, offset, err
+        offset, err = mcmcShifts.findOffsetMCMC(imgcatw, refcatw, maxShift=(10, 10, 0.3), rotOrigin=(ox, oy), precision=0.01, visualize=False)
+        print(drzfile, offset, err)
 
         dxp, dyp, dtp = offset
         updatehdr.updatewcs_with_shift(drzfile, drzfile, wcsname='DRZWCS', xsh=dxp, ysh=dyp, rot=dtp, scale=1.0, force=True)

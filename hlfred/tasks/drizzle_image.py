@@ -16,7 +16,6 @@ def drzImage(flt, pscale, rot):
                     context=False,
                     final_wcs=True,
                     final_scale=pscale,
-                    final_rot=rot,
-                    resetbits=None
+                    final_rot=rot
                     )
     return

@@ -1,6 +1,6 @@
 import click
 from hlfred.cli import pass_context
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from hlfred.tasks import apply_shift
 from stwcs.wcsutil import HSTWCS
 import sys, os, shutil, glob
@@ -10,6 +10,7 @@ task = os.path.basename(__name__).split('.')[-1][4:]
 @click.command(task, short_help='Apply shifts to images')
 @click.option('--restore', is_flag=True, help='Restore original WCS before applying offset')
 @click.option('--hlet', is_flag=True, help='Create a headerlet file')
+# @click.option('--sfile', default=None, help='Shift file for UV data')
 @click.option('--itype', default='_drz_sci.fits', help='Input file type')
 @click.option('--otype', default='_flt.fits', help='Output file type')
 @click.option('--ptask', default='saln', help='Previous task run')
@@ -23,7 +24,7 @@ def cli(ctx, restore, hlet, itype, otype, ptask):
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
     cfgf = '%s_cfg.json' % dsn
-    cfg = utils.rConfig(cfgf)
+    cfg = hutils.rConfig(cfgf)
     tcfg = cfg['tasks'][task] = {}
     tcfg['ptask'] = ptask
     tcfg['itype'] = itype
@@ -32,7 +33,7 @@ def cli(ctx, restore, hlet, itype, otype, ptask):
     tcfg['completed'] = False
     originf = cfg['infiles']
     
-    images = utils.imgList(cfg['images'])
+    images = hutils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
     
     n = len(infiles)
@@ -43,18 +44,18 @@ def cli(ctx, restore, hlet, itype, otype, ptask):
             try:
                 if restore:
                     apply_shift.restoreWCSdrz(inf, 0)
-                    for ext in utils.sciexts[utils.getInstDet(outf)]:
+                    for ext in hutils.sciexts[hutils.getInstDet(outf)]:
                         origflt = [s for s in originf if outf in s][0]
                         restoreWCSflt(outf, origflt, ext)
                 ctx.vlog('Applying offsets')
                 apply_shift.applyOffset(inf, outf, hlet=hlet)
         
-            except Exception, e:
-                utils.wConfig(cfg, cfgf)
-                print e
+            except Exception as e:
+                hutils.wConfig(cfg, cfgf)
+                print(e)
                 raise
         
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
-    utils.wConfig(cfg, cfgf)
+    hutils.wConfig(cfg, cfgf)

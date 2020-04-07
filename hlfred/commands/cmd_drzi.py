@@ -1,6 +1,6 @@
 import click
 from hlfred.cli import pass_context
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from hlfred.tasks import drizzle_image
 from stwcs.wcsutil import HSTWCS
 import sys, os, shutil, glob
@@ -21,7 +21,7 @@ def cli(ctx, itype, otype, ptask):
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
     cfgf = '%s_cfg.json' % dsn
-    cfg = utils.rConfig(cfgf)
+    cfg = hutils.rConfig(cfgf)
     tcfg = cfg['tasks'][task] = {}
     tcfg['ptask'] = ptask
     tcfg['itype'] = itype
@@ -38,7 +38,7 @@ def cli(ctx, itype, otype, ptask):
         # use native pixel scale
         pscale = None
         orientat = 0
-    images = utils.imgList(cfg['images'])
+    images = hutils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
     
     n = len(infiles)
@@ -47,12 +47,12 @@ def cli(ctx, itype, otype, ptask):
             ctx.vlog('\n\nDrizzling image %s - %s of %s', f, i+1, n)
             try:
                 drizzle_image.drzImage(f, pscale, orientat)
-            except Exception, e:
-                utils.wConfig(cfg, cfgf)
-                print e
+            except Exception as e:
+                hutils.wConfig(cfg, cfgf)
+                print(e)
                 raise
         
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
-    utils.wConfig(cfg, cfgf)
+    hutils.wConfig(cfg, cfgf)

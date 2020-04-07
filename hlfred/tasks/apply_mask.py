@@ -2,16 +2,16 @@ import numpy as np
 import os, sys, glob
 from astropy.io import fits
 import pyregion
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from PIL import Image, ImageDraw
 
 def applymask(fitsimg, regionfile, dq_ext):
     """Apply a mask to an HST image DQ array given a DS9 region file with polygons regions identifying areas to mask"""
-    print 'Reading region file %s' % regionfile
+    print('Reading region file %s' % regionfile)
     with fits.open(fitsimg, 'update') as fin:
-        print 'Applying %s to DQ ext %s' % (fitsimg, dq_ext)
+        print('Applying %s to DQ ext %s' % (fitsimg, dq_ext))
         data = fin[dq_ext].data
-        instdet = utils.getInstDet(fitsimg)
+        instdet = hutils.getInstDet(fitsimg)
         if instdet == 'wfc3ir':
             w,h = data.shape
         else:
@@ -22,13 +22,13 @@ def applymask(fitsimg, regionfile, dq_ext):
             if reg.name == 'polygon':
                 ImageDraw.Draw(img).polygon(reg.coord_list, outline=1, fill=1)
         data |= np.array(img)*8192
-    print 'Updating DQ array complete!'
+    print('Updating DQ array complete!')
     
     return
 
 def applypersist(fitsimg, maskimg):
     """Apply persistence mask to WFC3IR image DQ array given a persist mask image"""
-    print 'Updating DQ array in image %s using persistent mask image %s' % (fitsimg, maskimg)
+    print('Updating DQ array in image %s using persistent mask image %s' % (fitsimg, maskimg))
     with fits.open(fitsimg,'update') as fin:
         data = fin[3].data
         mask = fits.getdata(maskimg).astype(np.bool)

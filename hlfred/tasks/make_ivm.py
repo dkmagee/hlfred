@@ -5,7 +5,7 @@ import os, sys, glob, shutil
 def makeweight(ffin, iref):
     """Make inverse variance map for WFC3IR data"""
     ffout = ffin.replace('flt', 'ivm')
-    print 'Generating IVM image %s' % ffout
+    print('Generating IVM image %s' % ffout)
     ffo = fits.open(ffin)
     sci = ffo['SCI'].data
     etime = ffo['TIME'].data

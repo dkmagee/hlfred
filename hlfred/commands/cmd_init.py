@@ -1,6 +1,6 @@
 import click
 from hlfred.cli import pass_context
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from hlfred.tasks import init_image
 import sys, os, shutil, glob
 
@@ -28,8 +28,8 @@ def cli(ctx):
         sys.exit(1)
     procdir = cfg['procdir'] = os.path.join(ctx.rundir, dsn)
     infiles = cfg['infiles'] = glob.glob(os.path.join(dsdir, '*_flt.fits')) + glob.glob(os.path.join(dsdir, '*_flc.fits'))
-    cfg['refimg'] = None
-    cfg['refcat'] = None
+    cfg['refimg'] = ctx.refimg
+    cfg['refcat'] = ctx.refcat
     try: 
         ctx.vlog('Creating run directory %s', dsn)
         os.makedirs(procdir)
@@ -41,7 +41,7 @@ def cli(ctx):
     n = len(infiles)
     with click.progressbar(infiles, label='Copying images to run directory') as pbar:
         for i, f in enumerate(pbar):
-            fn = os.path.basename(f)
+            fn = str(os.path.basename(f))
             if '_flc.fits' in fn:
                 fn = fn.replace('_flc.fits', '_flt.fits')
             if not os.path.exists(fn):
@@ -67,11 +67,11 @@ def cli(ctx):
         ctx.vlog('Preping fits file %s for pipeline run', f)
         id, ftr = init_image.initImage(f)
         ctx.vlog('Creating footprint for fits file %s', f)
-        utils.getFootprint(f)
-        if id not in images.keys():
+        hutils.getFootprint(f)
+        if id not in list(images.keys()):
             images[id] = {}
         fid = f.split('_flt.fits')[0]
-        if ftr not in images[id].keys():
+        if ftr not in list(images[id].keys()):
             images[id][ftr] = []
             images[id][ftr].append(fid)
         else:
@@ -80,6 +80,6 @@ def cli(ctx):
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
-    utils.wConfig(cfg, cfgf)
+    hutils.wConfig(cfg, cfgf)
     ctx.vlog('Writing image lists')
-    utils.wImgLists(cfg)
+    hutils.wImgLists(cfg)

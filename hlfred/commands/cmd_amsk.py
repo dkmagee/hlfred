@@ -1,6 +1,6 @@
 import click
 from hlfred.cli import pass_context
-from hlfred.utils import utils
+from hlfred.hutils import hutils
 from hlfred.tasks import apply_mask
 import sys, os, shutil, glob
 
@@ -21,7 +21,7 @@ def cli(ctx, itype, otype, ptask):
     procdir = os.path.join(ctx.rundir, dsn)
     os.chdir(procdir)
     cfgf = '%s_cfg.json' % dsn
-    cfg = utils.rConfig(cfgf)
+    cfg = hutils.rConfig(cfgf)
     tcfg = cfg['tasks'][task] = {}
     tcfg['ptask'] = ptask
     tcfg['itype'] = itype
@@ -29,7 +29,7 @@ def cli(ctx, itype, otype, ptask):
     tcfg['stime'] = ctx.dt()
     tcfg['completed'] = False
     
-    images = utils.imgList(cfg['images'])
+    images = hutils.imgList(cfg['images'])
     infiles = [str('%s%s' % (i, itype)) for i in images]
     
     n = len(infiles)
@@ -52,14 +52,14 @@ def cli(ctx, itype, otype, ptask):
                             dq_ext = 3
                         ctx.vlog('Applying mask to %s - DQ extention %s', f, dq_ext)
                         apply_mask.applymask(f, m, dq_ext)
-                except Exception, e:
-                    utils.wConfig(cfg, cfgf)
-                    print e
+                except Exception as e:
+                    hutils.wConfig(cfg, cfgf)
+                    print(e)
                     raise
             else:
                 ctx.vlog('No masks found for %s', f)
             
-            if utils.getInstDet(f) == 'wfc3ir':
+            if hutils.getInstDet(f) == 'wfc3ir':
                 if pmaskdir:
                     ctx.vlog('Checking for persistance mask for image %s', f)
                     pmaskfile = os.path.join(pmaskdir, f.replace('flt.fits', 'pmask.fits')) 
@@ -70,4 +70,4 @@ def cli(ctx, itype, otype, ptask):
     tcfg['etime'] = ctx.dt()
     tcfg['completed'] = True
     ctx.vlog('Writing configuration file %s for %s task', cfgf, task)
-    utils.wConfig(cfg, cfgf)
+    hutils.wConfig(cfg, cfgf)

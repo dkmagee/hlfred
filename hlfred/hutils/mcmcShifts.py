@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 from itertools import product
 from scipy.spatial import cKDTree
@@ -6,7 +6,7 @@ from pymc import deterministic, Uniform, Cauchy
 from pymc.MCMC import MCMC
 
 """
-This code was lifted directly from Matt Mechtley HIPPIES Data Reduction Pipeline
+This code was lifted directly from Mira Mechtley HIPPIES Data Reduction Pipeline
 https://github.com/mmechtley/HIPPIES_Pipeline/blob/master/pipeline/CatalogTools.py
 """
 
@@ -36,7 +36,7 @@ def findOffsetMCMC(coords1, coords2, maxShift=(20, 20, 0), rotOrigin=(0, 0),
              ie. sqrt( err(coords1)**2 + err(coords2)**2 )
     """
     ## Set some default values for MCMC sampler, if not provided
-    kwargs.setdefault('iter', 20000)
+    kwargs.setdefault('iter', 30000)
     kwargs.setdefault('burn', 5000)
 
     coords1Over, coords2Over = _overlappedCoords(coords1, coords2, maxShift)
@@ -252,7 +252,7 @@ def _plotPoints(coords1, c2Xform, indexes2in1, indexes1in2):
     pyplot.figure()
     pyplot.scatter(coords1[:, 0], coords1[:, 1], c='SeaGreen', alpha=0.5)
     pyplot.scatter(c2Xform[:, 0], c2Xform[:, 1], c='Tomato', alpha=0.5)
-    lc = LineCollection(zip(coords1[indexes2in1[msk]], c2Xform[msk]),
+    lc = LineCollection(list(zip(coords1[indexes2in1[msk]], c2Xform[msk])),
                         colors='black')
     pyplot.gca().add_collection(lc)
     pyplot.show()

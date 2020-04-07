@@ -59,6 +59,8 @@ class HLFRED_CLI(click.MultiCommand):
             if filename.endswith('.py') and filename.startswith('cmd_'):
                 rv.append(filename[4:-3])
         rv.sort()
+        print('Printing commands........')
+        print(rv)
         return rv
 
     def get_command(self, ctx, name):
@@ -66,8 +68,8 @@ class HLFRED_CLI(click.MultiCommand):
             if sys.version_info[0] == 2:
                 name = name.encode('ascii', 'replace')
             mod = __import__('hlfred.commands.cmd_' + name, None, None, ['cli'])
-        except ImportError, e:
-            print e
+        except ImportError as e:
+            print(e)
             return
         return mod.cli
 
@@ -145,12 +147,14 @@ def cli(ctx, dataset_name, dsdir, rundir, pmaskdir, jref, iref, refimg, refcat, 
             sys.exit(1)
         else:
             ctx.refimg = refimg
+            ctx.log('HLFRED will use %s as the reference image for alignment', ctx.refimg)
     if refcat:
         if not os.path.exists(refcat):
             ctx.elog('Reference catalog %s not found!' % refcat)
             sys.exit(1)
         else:
             ctx.refcat = refcat
+            ctx.log('HLFRED will use %s as the reference catalog for alignment', ctx.refcat)
     ctx.verbose = verbose
     if not ctx.verbose:
         ctx.vlog('Verbose is enabled')
